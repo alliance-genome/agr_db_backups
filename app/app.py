@@ -1,6 +1,7 @@
 import logging
 import subprocess
 from datetime import date
+import sys
 from smart_open import open
 
 import boto3
@@ -21,7 +22,7 @@ def lambda_handler(event, context):
     args_response = get_args_dict(event, DB_ARG_PARAMS)
     if 'err_msg' in args_response:
         logger.error('Error while retrieving args: '+args_response['err_msg'])
-        exit
+        sys.exit(1)
 
     db_args = args_response['db_args']
     logger.info('env: '+db_args['env'])
@@ -32,7 +33,7 @@ def lambda_handler(event, context):
     backup_response = backup_postgres_to_s3(db_args)
     if 'err_msg' in backup_response:
         logger.error('Error while running backup: '+backup_response['err_msg'])
-        exit #TODO: figure out if this is the correct way to indicate failure in lambda
+        sys.exit(1)
 
     return {
         'message' : 'Backup completed successfully.'
