@@ -68,7 +68,7 @@ def get_args_dict(event, arg_set):
 
     for arg_key, ssm_key in arg_set.items():
         logger.debug('\tDefining {}...'.format(arg_key))
-        if arg_key in event:
+        if arg_key in event and event[arg_key] != "":
             return_args[arg_key] = event[arg_key]
         else:
             logger.debug("\t\tRetrieving {} from SSM...".format(arg_key))

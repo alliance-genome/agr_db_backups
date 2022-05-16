@@ -1,0 +1,97 @@
+# This is the SAM template used by the SAM CLI to build and deploy this project to AWS lambda
+Transform: AWS::Serverless-2016-10-31
+Description:
+  Serverless application to create a dump of a postgres database into S3
+
+Parameters:
+  dbHost:
+    Type: String
+    Default: ""
+  dbName:
+    Type: String
+    Default: ""
+  dbPassword:
+    Type: String
+    Default: ""
+  dbUser:
+    Type: String
+    Default: ""
+  env:
+    Type: String
+  LambdaFnName:
+    Type: String
+    Default: "agr_db_backups"
+  identifier:
+    Type: String
+  region:
+    Type: String
+    Default: us-east-1
+  s3Bucket:
+    Type: String
+    Default: agr-db-backups
+
+Resources:
+  agrDbBackups:
+    Type: AWS::Serverless::Function
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./
+      DockerTag: latest
+    Properties:
+      Description: Lambda function to create a dump of a postgres databases into S3
+      Events:
+        NightlySchedule:
+          Type: Schedule
+          Properties:
+            Description: Run nightly at 9 PM UTC
+            Enabled: True
+            Schedule: "cron(0 21 * * ? *)"
+            Input: !Sub |
+              {
+                "db_host": "${dbHost}",
+                "db_name": "${dbName}",
+                "db_password": "${dbPassword}",
+                "db_user": "${dbUser}",
+                "env": "${env}",
+                "identifier": "${identifier}",
+                "region": "${region}",
+                "s3_bucket": "${s3Bucket}"
+              }
+      FunctionName: !Sub "${LambdaFnName}"
+      MemorySize: 4096
+      PackageType: Image
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            -
+              Sid: SSMParametersReadAll
+              Effect: Allow
+              Action:
+                - 'ssm:List*'
+                - 'ssm:Describe*'
+                - 'ssm:Get*'
+              Resource: 'arn:aws:ssm:*:100225593120:parameter/*'
+            -
+              Sid: S3BucketWriteAll
+              Effect: Allow
+              Action: 's3:Put*'
+              Resource: !Sub "arn:aws:s3:::${s3Bucket}/*"
+            -
+              Sid: S3BucketReadAll
+              Effect: Allow
+              Action:
+                - 's3:ListBucket*'
+                - 's3:Get*'
+              Resource:
+                - !Sub "arn:aws:s3:::${s3Bucket}"
+
+      Timeout: 900
+      VpcConfig:
+          SecurityGroupIds:
+            - sg-03a0d277f55da5161
+          SubnetIds:
+            - subnet-0d4703177afb1797d
+            - subnet-04262fc338f638054
+            - subnet-044457c061edf85f2
+            - subnet-04019d42d5c9e6fb9
+            - subnet-049778993fb504a7c

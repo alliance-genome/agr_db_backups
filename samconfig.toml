@@ -1,0 +1,13 @@
+version = 0.1
+
+[curationAlpha.deploy.parameters]
+stack_name = "agr-db-backup-curation-alpha"
+parameter_overrides = "ParameterKey=identifier,ParameterValue=curation ParameterKey=env,ParameterValue=alpha ParameterKey=LambdaFnName,ParameterValue=agr_db_backups-curation_alpha"
+
+[curationBeta.deploy.parameters]
+stack_name = "agr-db-backup-curation-beta"
+parameter_overrides = "ParameterKey=identifier,ParameterValue=curation ParameterKey=env,ParameterValue=beta ParameterKey=LambdaFnName,ParameterValue=agr_db_backups-curation_beta"
+
+[curationProd.deploy.parameters]
+stack_name = "agr-db-backup-curation-prod"
+parameter_overrides = "ParameterKey=identifier,ParameterValue=curation ParameterKey=env,ParameterValue=production ParameterKey=LambdaFnName,ParameterValue=agr_db_backups-curation_production"
