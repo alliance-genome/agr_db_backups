@@ -93,7 +93,13 @@ def backup_postgres_to_s3(db_args):
     now_datetime_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     filename = '{env}-{identifier}-{date}.dump'.format(env=db_args['env'], identifier=db_args['identifier'], date=now_datetime_str)
     s3_target = 's3://{s3_bucket}/{filename}'.format(s3_bucket=db_args['s3_bucket'], filename=filename)
-    with open(s3_target, 'wb', transport_params={'client': boto3.client('s3', region_name=db_args['region'])}) as wout:
+    s3_transport_params = {
+        'client': boto3.client('s3', region_name=db_args['region']),
+        'client_kwargs': {
+            'S3.Client.create_multipart_upload': {'StorageClass': 'STANDARD_IA'}
+        }
+    }
+    with open(s3_target, 'wb', transport_params=s3_transport_params) as wout:
         process = subprocess.Popen(backup_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 
         logger.info("Streaming backup to {}...".format(s3_target))
