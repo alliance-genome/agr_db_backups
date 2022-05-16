@@ -1,6 +1,6 @@
 import logging
 import subprocess
-from datetime import date
+from datetime import datetime
 import sys
 from smart_open import open
 
@@ -90,8 +90,8 @@ def backup_postgres_to_s3(db_args):
     backup_command = 'PGPASSWORD={PGPASS} pg_dump -Fc -v -h {DB_HOST} -U {DB_USER} -d {DB_NAME}'.format(
         PGPASS=db_args['db_password'], DB_HOST=db_args['db_host'], DB_USER=db_args['db_user'], DB_NAME=db_args['db_name'])
 
-    today_str = date.today().strftime("%Y-%m-%d")
-    filename = '{env}-{identifier}-{date}.dump'.format(env=db_args['env'], identifier=db_args['identifier'], date=today_str)
+    now_datetime_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filename = '{env}-{identifier}-{date}.dump'.format(env=db_args['env'], identifier=db_args['identifier'], date=now_datetime_str)
     s3_target = 's3://{s3_bucket}/{filename}'.format(s3_bucket=db_args['s3_bucket'], filename=filename)
     with open(s3_target, 'wb', transport_params={'client': boto3.client('s3', region_name=db_args['region'])}) as wout:
         process = subprocess.Popen(backup_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
