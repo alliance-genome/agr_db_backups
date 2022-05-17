@@ -1,0 +1,86 @@
+name: Main branch Build and Deployment
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+jobs:
+  build-sam:
+    if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v3
+    - name: Setup python
+      uses: actions/setup-python@v3
+    - name: Setup AWS SAM
+      uses: aws-actions/setup-sam@v2
+    # This step will configure environment variables to be used by all steps
+    # involving AWS interaction further down
+    - name: AWS credentials configuration
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    - name: Build serverless application using SAM
+      run: sam build --use-container
+    - name: Store sam build result in cache
+      uses: actions/cache@v2
+      with:
+        path: .aws-sam/
+        key: ${{github.workflow}}.${{github.run_id}}.${{github.run_number}}.${{github.run_attempt}}-aws-sam-built
+  deploy-curationAlpha:
+    if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
+    needs: [build-sam]
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v3
+    - name: Setup python
+      uses: actions/setup-python@v3
+    - name: Setup AWS SAM
+      uses: aws-actions/setup-sam@v2
+    - name: Fetch sam build results from cache
+      uses: actions/cache@v2
+      with:
+        path: .aws-sam/
+        key: ${{github.workflow}}.${{github.run_id}}.${{github.run_number}}.${{github.run_attempt}}-aws-sam-built
+    - name: Deploy to AWS
+      run: sam deploy --config-env curationAlpha --resolve-image-repos --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
+  deploy-curationBeta:
+    if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
+    needs: [build-sam]
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v3
+    - name: Setup python
+      uses: actions/setup-python@v3
+    - name: Setup AWS SAM
+      uses: aws-actions/setup-sam@v2
+    - name: Fetch sam build results from cache
+      uses: actions/cache@v2
+      with:
+        path: .aws-sam/
+        key: ${{github.workflow}}.${{github.run_id}}.${{github.run_number}}.${{github.run_attempt}}-aws-sam-built
+    - name: Deploy to AWS
+      run: sam deploy --config-env curationBeta --resolve-image-repos --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
+  deploy-curationProd:
+    if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
+    needs: [build-sam]
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v3
+    - name: Setup python
+      uses: actions/setup-python@v3
+    - name: Setup AWS SAM
+      uses: aws-actions/setup-sam@v2
+    - name: Fetch sam build results from cache
+      uses: actions/cache@v2
+      with:
+        path: .aws-sam/
+        key: ${{github.workflow}}.${{github.run_id}}.${{github.run_number}}.${{github.run_attempt}}-aws-sam-built
+    - name: Deploy to AWS
+      run: sam deploy --config-env curationProd --resolve-image-repos --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
