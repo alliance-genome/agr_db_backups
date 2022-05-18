@@ -16,7 +16,7 @@ jobs:
     - name: Setup AWS SAM
       uses: aws-actions/setup-sam@v2
     # This step will configure environment variables to be used by all steps
-    # involving AWS interaction further down
+    # involving AWS interaction further down (in this job)
     - name: AWS credentials configuration
       uses: aws-actions/configure-aws-credentials@v1
       with:
@@ -46,6 +46,14 @@ jobs:
       with:
         path: .aws-sam/
         key: ${{github.workflow}}.${{github.run_id}}.${{github.run_number}}.${{github.run_attempt}}-aws-sam-built
+    # This step will configure environment variables to be used by all steps
+    # involving AWS interaction further down (in this job)
+    - name: AWS credentials configuration
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
     - name: Deploy to AWS
       run: sam deploy --config-env curationAlpha --resolve-image-repos --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
   deploy-curationBeta:
@@ -64,6 +72,14 @@ jobs:
       with:
         path: .aws-sam/
         key: ${{github.workflow}}.${{github.run_id}}.${{github.run_number}}.${{github.run_attempt}}-aws-sam-built
+    # This step will configure environment variables to be used by all steps
+    # involving AWS interaction further down (in this job)
+    - name: AWS credentials configuration
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
     - name: Deploy to AWS
       run: sam deploy --config-env curationBeta --resolve-image-repos --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
   deploy-curationProd:
@@ -82,5 +98,13 @@ jobs:
       with:
         path: .aws-sam/
         key: ${{github.workflow}}.${{github.run_id}}.${{github.run_number}}.${{github.run_attempt}}-aws-sam-built
+    # This step will configure environment variables to be used by all steps
+    # involving AWS interaction further down (in this job)
+    - name: AWS credentials configuration
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
     - name: Deploy to AWS
       run: sam deploy --config-env curationProd --resolve-image-repos --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
