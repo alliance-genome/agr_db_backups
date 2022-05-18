@@ -1,15 +1,12 @@
 name: Main branch Build and Deployment
 on:
-  # pull_request:
-  #   types: [closed]
-  #   branches:
-  #     - main
-  push:
+  pull_request:
+    types: [closed]
     branches:
       - main
 jobs:
   build-sam:
-    # if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
+    if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
     runs-on: ubuntu-20.04
     steps:
     - name: Check out repository code
@@ -42,7 +39,7 @@ jobs:
         path: .aws-sam/
         key: ${{github.workflow}}.${{github.run_id}}.${{github.run_number}}.${{github.run_attempt}}-aws-sam-built
   deploy-curationAlpha:
-    # if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
+    if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
     needs: [build-sam]
     runs-on: ubuntu-20.04
     steps:
@@ -75,7 +72,7 @@ jobs:
         sam deploy --template-file packaged-template.yaml --image-repository 100225593120.dkr.ecr.us-east-1.amazonaws.com/agr-db-backups-lambda \
           --config-env curationAlpha --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
   deploy-curationBeta:
-    # if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
+    if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
     needs: [build-sam]
     runs-on: ubuntu-20.04
     steps:
@@ -108,7 +105,7 @@ jobs:
         sam deploy --template-file packaged-template.yaml --image-repository 100225593120.dkr.ecr.us-east-1.amazonaws.com/agr-db-backups-lambda \
           --config-env curationBeta --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
   deploy-curationProd:
-    # if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
+    if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
     needs: [build-sam]
     runs-on: ubuntu-20.04
     steps:
