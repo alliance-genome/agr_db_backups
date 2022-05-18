@@ -9,7 +9,7 @@ on:
       - main
 jobs:
   build-sam:
-    if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
+    # if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
     runs-on: ubuntu-20.04
     steps:
     - name: Check out repository code
@@ -34,7 +34,7 @@ jobs:
         path: .aws-sam/
         key: ${{github.workflow}}.${{github.run_id}}.${{github.run_number}}.${{github.run_attempt}}-aws-sam-built
   deploy-curationAlpha:
-    if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
+    # if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
     needs: [build-sam]
     runs-on: ubuntu-20.04
     steps:
@@ -60,7 +60,7 @@ jobs:
     - name: Deploy to AWS
       run: sam deploy --config-env curationAlpha --resolve-image-repos --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
   deploy-curationBeta:
-    if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
+    # if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
     needs: [build-sam]
     runs-on: ubuntu-20.04
     steps:
@@ -86,7 +86,7 @@ jobs:
     - name: Deploy to AWS
       run: sam deploy --config-env curationBeta --resolve-image-repos --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
   deploy-curationProd:
-    if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
+    # if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
     needs: [build-sam]
     runs-on: ubuntu-20.04
     steps:
