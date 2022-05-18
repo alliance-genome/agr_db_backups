@@ -1,7 +1,10 @@
 name: Main branch Build and Deployment
 on:
-  pull_request:
-    types: [closed]
+  # pull_request:
+  #   types: [closed]
+  #   branches:
+  #     - main
+  push:
     branches:
       - main
 jobs:
