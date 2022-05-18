@@ -1,10 +1,17 @@
-FROM alpine:3.15
-RUN apk --update add postgresql-client python3 py-pip
+FROM public.ecr.aws/lambda/python:3.8
+
+# Copy function code
+COPY app/* ${LAMBDA_TASK_ROOT}/
+
+# Install function's python library dependencies
+WORKDIR ${LAMBDA_TASK_ROOT}
+RUN  pip3 install -r requirements.txt
+
+# Install function's external binary dependencies
+COPY pgdg.repo /etc/yum.repos.d/
+RUN yum update -y \
+    && yum install -y postgresql13
+
 RUN rm -rf /var/cache/apk/*
-RUN pip install --upgrade awscli
 
-WORKDIR /src
-COPY backup.sh /src
-RUN chmod +x /src/backup.sh
-
-CMD /src/backup.sh
+CMD [ "app.lambda_handler" ]
