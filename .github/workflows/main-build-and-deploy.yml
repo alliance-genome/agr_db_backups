@@ -28,7 +28,15 @@ jobs:
         aws-region: us-east-1
     - name: Build serverless application using SAM
       run: sam build --use-container
-    - name: Store sam build result in cache
+    #TODO: restore --resolve-image-repos usage (including in sam deploy cmds) once `sam package` supports it
+    - name: Package and upload the serverless application
+      run: sam package --image-repository 100225593120.dkr.ecr.us-east-1.amazonaws.com/agr-db-backups-lambda --resolve-s3 --output-template-file packaged-template.yaml
+    - name: Store packaged template in cache
+      uses: actions/cache@v2
+      with:
+        path: packaged-template.yaml
+        key: ${{github.workflow}}.${{github.run_id}}.${{github.run_number}}.${{github.run_attempt}}-packaged-template.yaml
+    - name: Store local sam build result in cache
       uses: actions/cache@v2
       with:
         path: .aws-sam/
@@ -49,6 +57,11 @@ jobs:
       with:
         path: .aws-sam/
         key: ${{github.workflow}}.${{github.run_id}}.${{github.run_number}}.${{github.run_attempt}}-aws-sam-built
+    - name: Fetch packaged template from cache
+      uses: actions/cache@v2
+      with:
+        path: packaged-template.yaml
+        key: ${{github.workflow}}.${{github.run_id}}.${{github.run_number}}.${{github.run_attempt}}-packaged-template.yaml
     # This step will configure environment variables to be used by all steps
     # involving AWS interaction further down (in this job)
     - name: AWS credentials configuration
@@ -58,7 +71,8 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
     - name: Deploy to AWS
-      run: sam deploy --config-env curationAlpha --resolve-image-repos --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
+      run: sam deploy --template-file packaged-template.yaml --image-repository 100225593120.dkr.ecr.us-east-1.amazonaws.com/agr-db-backups-lambda \
+            --config-env curationAlpha --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
   deploy-curationBeta:
     # if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
     needs: [build-sam]
@@ -75,6 +89,11 @@ jobs:
       with:
         path: .aws-sam/
         key: ${{github.workflow}}.${{github.run_id}}.${{github.run_number}}.${{github.run_attempt}}-aws-sam-built
+    - name: Fetch packaged template from cache
+      uses: actions/cache@v2
+      with:
+        path: packaged-template.yaml
+        key: ${{github.workflow}}.${{github.run_id}}.${{github.run_number}}.${{github.run_attempt}}-packaged-template.yaml
     # This step will configure environment variables to be used by all steps
     # involving AWS interaction further down (in this job)
     - name: AWS credentials configuration
@@ -84,7 +103,8 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
     - name: Deploy to AWS
-      run: sam deploy --config-env curationBeta --resolve-image-repos --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
+      run: sam deploy --template-file packaged-template.yaml --image-repository 100225593120.dkr.ecr.us-east-1.amazonaws.com/agr-db-backups-lambda \
+            --config-env curationBeta --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
   deploy-curationProd:
     # if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
     needs: [build-sam]
@@ -101,6 +121,11 @@ jobs:
       with:
         path: .aws-sam/
         key: ${{github.workflow}}.${{github.run_id}}.${{github.run_number}}.${{github.run_attempt}}-aws-sam-built
+    - name: Fetch packaged template from cache
+      uses: actions/cache@v2
+      with:
+        path: packaged-template.yaml
+        key: ${{github.workflow}}.${{github.run_id}}.${{github.run_number}}.${{github.run_attempt}}-packaged-template.yaml
     # This step will configure environment variables to be used by all steps
     # involving AWS interaction further down (in this job)
     - name: AWS credentials configuration
@@ -110,4 +135,5 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
     - name: Deploy to AWS
-      run: sam deploy --config-env curationProd --resolve-image-repos --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
+      run: sam deploy --template-file packaged-template.yaml --image-repository 100225593120.dkr.ecr.us-east-1.amazonaws.com/agr-db-backups-lambda \
+            --config-env curationProd --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
