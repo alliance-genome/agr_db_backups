@@ -71,8 +71,9 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
     - name: Deploy to AWS
-      run: sam deploy --template-file packaged-template.yaml --image-repository 100225593120.dkr.ecr.us-east-1.amazonaws.com/agr-db-backups-lambda \
-            --config-env curationAlpha --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
+      run: |
+        sam deploy --template-file packaged-template.yaml --image-repository 100225593120.dkr.ecr.us-east-1.amazonaws.com/agr-db-backups-lambda \
+          --config-env curationAlpha --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
   deploy-curationBeta:
     # if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
     needs: [build-sam]
@@ -103,8 +104,9 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
     - name: Deploy to AWS
-      run: sam deploy --template-file packaged-template.yaml --image-repository 100225593120.dkr.ecr.us-east-1.amazonaws.com/agr-db-backups-lambda \
-            --config-env curationBeta --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
+      run: |
+        sam deploy --template-file packaged-template.yaml --image-repository 100225593120.dkr.ecr.us-east-1.amazonaws.com/agr-db-backups-lambda \
+          --config-env curationBeta --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
   deploy-curationProd:
     # if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
     needs: [build-sam]
@@ -135,5 +137,6 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
     - name: Deploy to AWS
-      run: sam deploy --template-file packaged-template.yaml --image-repository 100225593120.dkr.ecr.us-east-1.amazonaws.com/agr-db-backups-lambda \
-            --config-env curationProd --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
+      run: |
+        sam deploy --template-file packaged-template.yaml --image-repository 100225593120.dkr.ecr.us-east-1.amazonaws.com/agr-db-backups-lambda \
+          --config-env curationProd --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
