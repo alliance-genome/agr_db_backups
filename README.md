@@ -1,6 +1,7 @@
 # AGR DB Backups
 
-This repo holds the code used to run automated (daily) postgres DB dumps through AWS Lambda.
+This repo holds the code used to run automated (daily) postgres DB dumps through AWS Lambda,
+and to restore them, enabling data rollback to different environments.
 
 ## Getting Started
 
@@ -36,9 +37,13 @@ To run the container and the backup code it contains locally, execute the follow
 #      AWS_PROFILE variable to indicate the named profile to use, if your agr profile does not have the "default" name.
 > docker run --net curation -p 9000:8080 -v /home/mlp/gitrepos/agr-db_backups/app/app.py:/var/task/app.py -v ~/.aws:/root/.aws -e AWS_PROFILE agr_db_backups_lambda
 # Trigger the lambda function in the locally running container (use a different terminal session)
-#  "identifier" and "env" are required data fields, all others will be retrieved from SSM
-#  when left undefined, or use the defined value otherwise (SSM does not hold value for local dev env testing though).
-> curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"identifier": "curation", "env": "mluypaert-dev", "db_name": "curation", "db_user": "postgres", "db_password": "...", "db_host": "postgres", "s3_bucket": "agr-db-backups"}'
+#  "identifier" and "target_env" are required data fields, all others will be retrieved from SSM when left undefined,
+#  or use the defined value otherwise (note that SSM does not hold values for local dev env operations/testing).
+
+#To backup your local postgres DB (will create a dumpfile of your local DB in S3):
+> curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"action": "backup", "identifier": "curation", "target_env": "mluypaert-dev", "db_name": "curation", "db_user": "postgres", "db_password": "...", "db_host": "postgres", "s3_bucket": "agr-db-backups"}'
+#To restore the latest available alpha dump to your local postgres DB:
+> curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"action": "restore", "identifier": "curation", "src_env": "alpha", "target_env": "mluypaert-dev", "db_name": "curation", "db_user": "postgres", "db_password": "...", "db_host": "postgres"}'
 ```
 
 ## Testing and deployment
@@ -82,7 +87,7 @@ After building, you can test the application locally using the sam cli:
 # * ""
 #     To enable creating a backup of your local dockerized database, ensure the lambda container
 #      (this code) is run in the same network as the database container (here "curation").
-> echo '{"identifier": "curation", "env": "mluypaert-dev", "db_name": "curation", "db_user": "postgres", "db_password": "...", "db_host": "postgres", "s3_bucket": "agr-db-backups"}' | sam local invoke "agrDbBackups" --event - --profile agr --docker-network curation
+> echo '{"action": "backup", "identifier": "curation", "target_env": "mluypaert-dev", "db_name": "curation", "db_user": "postgres", "db_password": "...", "db_host": "postgres", "s3_bucket": "agr-db-backups"}' | sam local invoke "agrDbBackups" --event - --profile agr --docker-network curation
 ```
 
 ### Deployment
