@@ -2,7 +2,6 @@ import logging
 import os
 import subprocess
 from datetime import datetime
-import sys
 from smart_open import open
 
 import boto3
@@ -22,8 +21,9 @@ def lambda_handler(event, context):
 	};
 	args_response = get_args_dict(event, DB_ARG_PARAMS)
 	if 'err_msg' in args_response:
-		logger.error('Error while retrieving args: '+args_response['err_msg'])
-		sys.exit(1)
+		err_msg = 'Error while retrieving args: '+args_response['err_msg']
+		logger.error(err_msg)
+		raise Exception(err_msg)
 
 	db_args = args_response['db_args']
 	logger.info('target_env: '+db_args['target_env'])
@@ -39,9 +39,10 @@ def lambda_handler(event, context):
 		response = restore_s3_to_postgres(db_args)
 
 	if 'err_msg' in response:
-		logger.error('Error while running {action}: {msg}'.format(
-			action=db_args['action'], msg=response['err_msg']))
-		sys.exit(1)
+		err_msg = 'Error while running {action}: {msg}'.format(
+			action=db_args['action'], msg=response['err_msg'])
+		logger.error(err_msg)
+		raise Exception(err_msg)
 
 	return {
 		'message' : '{action} completed successfully.'.format(action=db_args['action'])
