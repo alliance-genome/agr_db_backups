@@ -10,6 +10,11 @@ These instructions will help you setup a local development environment to develo
 ## Contents
 
 -  [Developing](#developing)
+-  [Testing and Deployment](#testing-and-deployment)
+   *  [Validating](#validating)
+   *  [Building](#building)
+   *  [Testing](#testing)
+   *  [Deployment](#deployment)
 
 ## Developing
 This application is developed as a docker container intended to run on AWS Lambda.
@@ -61,7 +66,7 @@ SAM configuration is store in two files:
     This file contains named sets of CLI argument (and template parameter) values,
     which can be used to easily apply those values when building/deploying/... for specific environments.
 
-### Validation
+### Validating
 When making changes to the [SAM template file](template.yaml), validate them before requesting a PR
 or attempting a deployment, by running the following command:
 ```bash
@@ -108,3 +113,4 @@ serverless application to AWS by running the following command:
 #     and roles required for this serverless application.
 > sam deploy --config-env curationAlpha --resolve-image-repos --resolve-s3 --capabilities CAPABILITY_IAM
 ```
+Code pushed to the main branch of this repository automatically gets built and deployed, through [github actions](./.github/workflows/main-build-and-deploy.yml).
