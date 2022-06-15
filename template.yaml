@@ -16,7 +16,7 @@ Parameters:
   dbUser:
     Type: String
     Default: ""
-  target_env:
+  targetEnv:
     Type: String
   LambdaFnName:
     Type: String
@@ -52,7 +52,7 @@ Resources:
                 "db_name": "${dbName}",
                 "db_password": "${dbPassword}",
                 "db_user": "${dbUser}",
-                "target_env": "${target_env}",
+                "target_env": "${targetEnv}",
                 "identifier": "${identifier}",
                 "region": "${region}",
                 "s3_bucket": "${s3Bucket}"

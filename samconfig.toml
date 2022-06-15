@@ -1,16 +1,16 @@
 version = 0.1
 
 [curationAlpha.deploy.parameters]
-parameter_overrides = "ParameterKey=identifier,ParameterValue=curation ParameterKey=target_env,ParameterValue=alpha ParameterKey=LambdaFnName,ParameterValue=agr_db_backups-curation_alpha"
+parameter_overrides = "ParameterKey=identifier,ParameterValue=curation ParameterKey=targetEnv,ParameterValue=alpha ParameterKey=LambdaFnName,ParameterValue=agr_db_backups-curation_alpha"
 region = "us-east-1"
 stack_name = "agr-db-backup-curation-alpha"
 
 [curationBeta.deploy.parameters]
-parameter_overrides = "ParameterKey=identifier,ParameterValue=curation ParameterKey=target_env,ParameterValue=beta ParameterKey=LambdaFnName,ParameterValue=agr_db_backups-curation_beta"
+parameter_overrides = "ParameterKey=identifier,ParameterValue=curation ParameterKey=targetEnv,ParameterValue=beta ParameterKey=LambdaFnName,ParameterValue=agr_db_backups-curation_beta"
 region = "us-east-1"
 stack_name = "agr-db-backup-curation-beta"
 
 [curationProd.deploy.parameters]
-parameter_overrides = "ParameterKey=identifier,ParameterValue=curation ParameterKey=target_env,ParameterValue=production ParameterKey=LambdaFnName,ParameterValue=agr_db_backups-curation_production"
+parameter_overrides = "ParameterKey=identifier,ParameterValue=curation ParameterKey=targetEnv,ParameterValue=production ParameterKey=LambdaFnName,ParameterValue=agr_db_backups-curation_production"
 region = "us-east-1"
 stack_name = "agr-db-backup-curation-prod"
