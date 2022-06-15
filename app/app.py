@@ -121,8 +121,7 @@ def backup_postgres_to_s3(db_args):
 
 	logger = logging.getLogger(__name__)
 
-	backup_command = 'PGPASSWORD={PGPASS} pg_dump -Fc -v -h {DB_HOST} -U {DB_USER} -d {DB_NAME}'.format(
-		PGPASS=db_args['db_password'], DB_HOST=db_args['db_host'], DB_USER=db_args['db_user'], DB_NAME=db_args['db_name'])
+	backup_command = 'pg_dump -Fc -v -d {DB_NAME}'.format(DB_NAME=db_args['db_name'])
 
 	now_datetime_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 	filename = '{env}-{identifier}-{date}.dump'.format(env=db_args['target_env'], identifier=db_args['identifier'], date=now_datetime_str)
@@ -134,7 +133,12 @@ def backup_postgres_to_s3(db_args):
 		}
 	}
 	with open(s3_target, 'wb', transport_params=s3_transport_params) as wout:
-		process = subprocess.Popen(backup_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+		pg_env = os.environ.copy()
+		pg_env["PGUSER"] = db_args['db_user']
+		pg_env["PGHOST"] = db_args['db_host']
+		pg_env["PGPASSWORD"] = db_args['db_password']
+
+		process = subprocess.Popen(backup_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, env=pg_env)
 
 		logger.info("Streaming backup to {}...".format(s3_target))
 		for c in iter(lambda: process.stdout.read(1), b''):
