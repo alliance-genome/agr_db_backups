@@ -4,6 +4,9 @@ Description:
   Serverless application to create a dump of a postgres database into S3
 
 Parameters:
+  action:
+    Type: String
+    Default: ""
   dbHost:
     Type: String
     Default: ""
@@ -48,6 +51,7 @@ Resources:
             Schedule: "cron(0 21 * * ? *)"
             Input: !Sub |
               {
+                "action": "${action}",
                 "db_host": "${dbHost}",
                 "db_name": "${dbName}",
                 "db_password": "${dbPassword}",
