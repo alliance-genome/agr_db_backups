@@ -59,12 +59,14 @@ which are require in addition to the function code. This allows for an easy and 
 
 For instructions on how to install AWS SAM, see the [AWS docs](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html).
 
-SAM configuration is store in two files:
+SAM configuration is generally stored in two files:
  * [template.yaml](template.yaml)
     This file contains the AWS SAM template describing all aspects of the serverless application.
- * [samconfig.toml](samconfig.toml)
-    This file contains named sets of CLI argument (and template parameter) values,
+ * samconfig.toml
+    This file can contain named sets of CLI argument (and template parameter) values,
     which can be used to easily apply those values when building/deploying/... for specific environments.
+    As this application is currently only deployed as one environment,
+    this file is currently not being used in this repository.
 
 ### Validating
 When making changes to the [SAM template file](template.yaml), validate them before requesting a PR
@@ -100,10 +102,6 @@ After building (and optional testing), you can deploy the built
 serverless application to AWS by running the following command:
 ```bash
 # Below example command breakdown:
-# * "--config-env curationAlpha":
-#     This sets arguments as stored in the samconfig.toml file to deploy a specific environment.
-#     Use "curationAlpha" to deploy the application to create regular backups from the curation alpha database,
-#     "curationBeta" for the curation beta database or "curationProd" for the curation production database.
 # * "--resolve-image-repos --resolve-s3"
 #     This creates AWS-managed ECR repositories and S3 buckets to store the serverless application's
 #     configurations, code and docker images.
@@ -111,6 +109,6 @@ serverless application to AWS by running the following command:
 #     As the template.yaml defines IAM permissions the serverless application needs to function correctly,
 #     this argument serves to acknowledge that and allow AWS to automatically create the necessary IAM policies
 #     and roles required for this serverless application.
-> sam deploy --config-env curationAlpha --resolve-image-repos --resolve-s3 --capabilities CAPABILITY_IAM
+> sam deploy --resolve-image-repos --resolve-s3 --capabilities CAPABILITY_IAM
 ```
 Code pushed to the main branch of this repository automatically gets built and deployed, through [github actions](./.github/workflows/main-build-and-deploy.yml).
