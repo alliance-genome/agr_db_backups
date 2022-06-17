@@ -62,11 +62,10 @@ For instructions on how to install AWS SAM, see the [AWS docs](https://docs.aws.
 SAM configuration is generally stored in two files:
  * [template.yaml](template.yaml)
     This file contains the AWS SAM template describing all aspects of the serverless application.
- * samconfig.toml
-    This file can contain named sets of CLI argument (and template parameter) values,
-    which can be used to easily apply those values when building/deploying/... for specific environments.
-    As this application is currently only deployed as one environment,
-    this file is currently not being used in this repository.
+ * [samconfig.toml](samconfig.toml)
+    This file contains sets of CLI argument (and template parameter) values,
+    which can be used as defaults when building/deploying etc using AWS SAM,
+    or to easily apply sets of values to specific environments using named sets.
 
 ### Validating
 When making changes to the [SAM template file](template.yaml), validate them before requesting a PR
