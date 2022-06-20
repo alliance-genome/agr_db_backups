@@ -4,28 +4,9 @@ Description:
   Serverless application to create a dump of a postgres database into S3
 
 Parameters:
-  dbHost:
-    Type: String
-    Default: ""
-  dbName:
-    Type: String
-    Default: ""
-  dbPassword:
-    Type: String
-    Default: ""
-  dbUser:
-    Type: String
-    Default: ""
-  env:
-    Type: String
   LambdaFnName:
     Type: String
     Default: "agr_db_backups"
-  identifier:
-    Type: String
-  region:
-    Type: String
-    Default: us-east-1
   s3Bucket:
     Type: String
     Default: agr-db-backups
@@ -38,23 +19,51 @@ Resources:
       DockerContext: ./
       DockerTag: latest
     Properties:
-      Description: Lambda function to create a dump of a postgres databases into S3
+      Description: Lambda function to backup or restore a postgres databases to or from S3
       Events:
-        NightlySchedule:
+        curationAlphaBackups:
           Type: Schedule
           Properties:
+            Name: CurationAlphaNightlyBackupSchedule
             Description: Run nightly at 9 PM UTC
             Enabled: True
             Schedule: "cron(0 21 * * ? *)"
             Input: !Sub |
               {
-                "db_host": "${dbHost}",
-                "db_name": "${dbName}",
-                "db_password": "${dbPassword}",
-                "db_user": "${dbUser}",
-                "env": "${env}",
-                "identifier": "${identifier}",
-                "region": "${region}",
+                "action": "backup",
+                "target_env": "alpha",
+                "identifier": "curation",
+                "region": "${AWS::Region}",
+                "s3_bucket": "${s3Bucket}"
+              }
+        curationBetaBackups:
+          Type: Schedule
+          Properties:
+            Name: CurationBetaNightlyBackupSchedule
+            Description: Run nightly at 9 PM UTC
+            Enabled: True
+            Schedule: "cron(0 21 * * ? *)"
+            Input: !Sub |
+              {
+                "action": "backup",
+                "target_env": "beta",
+                "identifier": "curation",
+                "region": "${AWS::Region}",
+                "s3_bucket": "${s3Bucket}"
+              }
+        curationProdBackups:
+          Type: Schedule
+          Properties:
+            Name: CurationProdNightlyBackupSchedule
+            Description: Run nightly at 9 PM UTC
+            Enabled: True
+            Schedule: "cron(0 21 * * ? *)"
+            Input: !Sub |
+              {
+                "action": "backup",
+                "target_env": "production",
+                "identifier": "curation",
+                "region": "${AWS::Region}",
                 "s3_bucket": "${s3Bucket}"
               }
       FunctionName: !Sub "${LambdaFnName}"
