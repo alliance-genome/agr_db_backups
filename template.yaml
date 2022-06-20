@@ -7,9 +7,6 @@ Parameters:
   LambdaFnName:
     Type: String
     Default: "agr_db_backups"
-  region:
-    Type: String
-    Default: us-east-1
   s3Bucket:
     Type: String
     Default: agr-db-backups
@@ -36,7 +33,7 @@ Resources:
                 "action": "backup",
                 "target_env": "alpha",
                 "identifier": "curation",
-                "region": "${region}",
+                "region": "${AWS::Region}",
                 "s3_bucket": "${s3Bucket}"
               }
         curationBetaBackups:
@@ -51,7 +48,7 @@ Resources:
                 "action": "backup",
                 "target_env": "beta",
                 "identifier": "curation",
-                "region": "${region}",
+                "region": "${AWS::Region}",
                 "s3_bucket": "${s3Bucket}"
               }
         curationProdBackups:
@@ -66,7 +63,7 @@ Resources:
                 "action": "backup",
                 "target_env": "production",
                 "identifier": "curation",
-                "region": "${region}",
+                "region": "${AWS::Region}",
                 "s3_bucket": "${s3Bucket}"
               }
       FunctionName: !Sub "${LambdaFnName}"
