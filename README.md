@@ -15,6 +15,10 @@ These instructions will help you setup a local development environment to develo
    *  [Building](#building)
    *  [Testing](#testing)
    *  [Deployment](#deployment)
+-  [Invocation](#invocation)
+   *  [Scheduled invocation](#scheduled-invocation)
+   *  [Manual invocation](#manual-invocation)
+
 
 ## Developing
 This application is developed as a docker container intended to run on AWS Lambda.
@@ -50,6 +54,7 @@ To run the container and the backup code it contains locally, execute the follow
 #To restore the latest available alpha dump to your local postgres DB:
 > curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"action": "restore", "identifier": "curation", "src_env": "alpha", "target_env": "mluypaert-dev", "db_name": "curation", "db_user": "postgres", "db_password": "...", "db_host": "postgres"}'
 ```
+
 
 ## Testing and deployment
 The application is built and deployed to AWS using AWS SAM, an open-source framework that enables
@@ -111,3 +116,47 @@ serverless application to AWS by running the following command:
 > sam deploy --resolve-image-repos --resolve-s3 --capabilities CAPABILITY_IAM
 ```
 Code pushed to the main branch of this repository automatically gets built and deployed, through [github actions](./.github/workflows/main-build-and-deploy.yml).
+
+
+## Invocation
+### Scheduled invocation
+To enable automatic scheduled backups of several application DBs and environments,
+we use Amazon EventBridge to trigger the deployed AWS lambda function of this repository.
+These events are defined as code in the [template.yaml](template.yaml) file in the `Resources` > `agrDbBackups` > `Properties` > `Events` section,
+and each define a cron schedule to run on, and the payload to send upon triggering.
+Each of those events thus backs ups up one environment of one application.
+
+To add the backup of a new DB or environment to the event list:
+1. Ensure the necessary parameters for the DB to be backed up are stored in the [AWS Systems Manager Parameter Store](https://us-east-1.console.aws.amazon.com/systems-manager/parameters/). This repository code retrieves the required (unprovided) credentials from the parameter store.
+2. Add a new record to the `Resources` > `agrDbBackups` > `Properties` > `Events` list in the [template.yaml](template.yaml) file.
+   You can copy any existing record and edit the keyname, `Name`, `Description`, `Schedule` and `Input` data accordingly.
+3. Commit the above made changes to the [template.yaml](template.yaml) file and create a PR to merge.
+   After PR merge, the new event will get deployed automatically and the new backups will run on their schedule.
+
+### Manual invocation
+As the application code is deployed as an AWS lambda function, it can be manually invoked through the aws cli.
+This can be useful to invoke a one-off backup of a specific database/environment before attempting to make manual changes to it,
+or to restore a dump of one environment, to any other environment (and resetting the data in place in the process).
+```bash
+#To invoke an one-off backup, and synchronously wait for its completion.
+# Please change the payload to match the desired application and target environment.
+# Please change the payload to match the desired application and target environment.
+aws --cli-read-timeout 960 lambda invoke --function-name agr_db_backups --cli-binary-format raw-in-base64-out \
+ --payload '{"action": "backup", "target_env": "alpha", "identifier": "curation", "region": "us-east-1", "s3_bucket": "agr-db-backups"}' \
+ output.file
+#To restore the latest production DB backup to the beta environment
+#, and synchronously wait for its completion
+aws --cli-read-timeout 960 lambda invoke --function-name agr_db_backups --cli-binary-format raw-in-base64-out \
+ --payload '{"action": "restore", "target_env": "beta", "src_env": "production", "identifier": "curation", "region": "us-east-1", "s3_bucket": "agr-db-backups"}' \
+ output.file
+```
+
+Such manual invocations will produce output like the following on STDOUT on success
+```bash
+{
+    "StatusCode": 200,
+    "ExecutedVersion": "$LATEST"
+}
+```
+, or report a non-200 `StatusCode` or `"FunctionError": "Unhandled"` in its reported status on failure.
+The output of the function, which can contain more details on failure, can be found in the `output.file` file.
