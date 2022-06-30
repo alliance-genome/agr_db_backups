@@ -80,6 +80,13 @@ def get_args_dict(event, arg_set):
 	if 'src_env' in event:
 		return_args['src_env'] = event['src_env']
 
+	# Prevent data roll-up from environments with lower data integrity
+	# to environments with higher data integrity
+	if return_args['action'] == 'restore' and env_rank(return_args['src_env']) > env_rank(return_args['target_env']):
+		error_message = "Action 'restore' is not allowed to target env {target} from source env {source}."\
+		                .format(target=return_args['target_env'],source=return_args['src_env'])
+		return {'err_msg': error_message}
+
 	if 'region' in event:
 		return_args['region'] = event['region']
 
@@ -238,3 +245,23 @@ def get_latest_s3_backup(bucket_name, prefix):
 				latest_all = latest_page
 
 	return latest_all['Key']
+
+def env_rank(env_name):
+	'''
+	Function to return the rank of an environment.
+	Higher ranked envs (lower integer value) should have
+	better data consistency than lower ranked ones.
+	'''
+	ENV_RANK = {
+		'production': 1,
+		'prod':  1,
+		'beta':  2,
+		'alpha': 3,
+		'dev': 4
+	}
+
+	if env_name in ENV_RANK:
+		return ENV_RANK[env_name]
+	# If the environment name is unkown, rank it below all known envs
+	else:
+		return max(ENV_RANK.values())+1
