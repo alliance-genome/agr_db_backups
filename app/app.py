@@ -20,6 +20,9 @@ def lambda_handler(event, context):
 		's3_bucket' :   'bucket'
 	};
 	args_response = get_args_dict(event, DB_ARG_PARAMS)
+	if 'help' in args_response:
+		logger.info(args_response['help'])
+		return args_response['help']
 	if 'err_msg' in args_response:
 		err_msg = 'Error while retrieving args: '+args_response['err_msg']
 		logger.error(err_msg)
@@ -52,6 +55,28 @@ def get_args_dict(event, arg_set):
 
 	logger = logging.getLogger(__name__)
 
+	help_json = {
+		"description": "This function can backup any AGR database or restore an earlier made"+
+		               " backup to the same or a different environment (e.g. for data roll-down)."+
+		               " Send in a json payload with one or more of the below options as key-value pairs.",
+		"options": {
+			"action":      "Define an action to perform. Value must be either 'backup' or 'restore'.",
+			"db_host":     "Host URL of target DB. Defaults to AWS SSM parameter store value.",
+			"db_name":     "DB name of target DB. Defaults to AWS SSM parameter store value.",
+			"db_password": "DB password for target DB. Defaults to AWS SSM parameter store value.",
+			"db_user":     "DB username for target DB. Defaults to AWS SSM parameter store value.",
+			"help":        "Print this help text (provide any value).",
+			"identifier":  "Application identifier to backup/restore for (for example 'curation').",
+			"region":      "AWS region to retrieve/write backups from/to. Defaults to 'us-east-1'.",
+			"s3_bucket":   "AWS S3 bucket name to retrieve/write backups from/to. Defaults to AWS SSM parameter store value.",
+			"src_env":     "The source environment to find a backup from to restore."+
+			               " Defaults to 'production', only relevant for restore action.",
+			"target_env":  "The target environment to backup/restore from/to. Defaults to 'dev'."
+		}
+	}
+	if 'help' in event:
+		return {'help': help_json}
+
 	#Default values
 	return_args = {
 		'target_env': 'dev',
@@ -59,6 +84,7 @@ def get_args_dict(event, arg_set):
 		'region': 'us-east-1'
 	}
 
+	#Input argument validation
 	if 'action' in event:
 		if event['action'] not in ('backup', 'restore'):
 			error_message = "Argument action can only have value 'backup' or 'restore'"
