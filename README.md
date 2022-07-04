@@ -137,18 +137,24 @@ To add the backup of a new DB or environment to the event list:
 As the application code is deployed as an AWS lambda function, it can be manually invoked through the aws cli.
 This can be useful to invoke a one-off backup of a specific database/environment before attempting to make manual changes to it,
 or to restore a dump of one environment, to any other environment (and resetting the data in place in the process).
+
+To print (readably-formatted) help on all available arguments for the payload:
 ```bash
-#To print (readably-formatted) help on all available arguments for the payload:
 aws lambda invoke --function-name agr_db_backups --cli-binary-format raw-in-base64-out  --payload '{"help": "true"}' lambda.output \
  && jq . lambda.output
-#To invoke an one-off backup, and synchronously wait for its completion.
-# Please change the payload to match the desired application and target environment.
-# Please change the payload to match the desired application and target environment.
+```
+
+To invoke an one-off backup of the curation alpha DB, and synchronously wait for its completion:
+```bash
+# Change the payload to match the desired application (identifier) and target environment if not curation-alpha.
 aws --cli-read-timeout 960 lambda invoke --function-name agr_db_backups --cli-binary-format raw-in-base64-out \
  --payload '{"action": "backup", "target_env": "alpha", "identifier": "curation", "region": "us-east-1", "s3_bucket": "agr-db-backups"}' \
  lambda.output
-#To restore the latest production DB backup to the beta environment
-#, and synchronously wait for its completion
+```
+
+To restore the latest production DB backup to the beta environment, and synchronously wait for its completion
+```bash
+# Change the payload to match the desired application (identifier), source environment and target environment if not curation prod => beta.
 aws --cli-read-timeout 960 lambda invoke --function-name agr_db_backups --cli-binary-format raw-in-base64-out \
  --payload '{"action": "restore", "target_env": "beta", "src_env": "production", "identifier": "curation", "region": "us-east-1", "s3_bucket": "agr-db-backups"}' \
  lambda.output
@@ -162,4 +168,4 @@ Such manual invocations will produce output like the following on STDOUT on succ
 }
 ```
 , or report a non-200 `StatusCode` or `"FunctionError": "Unhandled"` in its reported status on failure.
-The output of the function, which can contain more details on failure, can be found in the `output.file` file.
+The output of the function, which can contain more details on failure, can be found in the `lambda.output` file.
