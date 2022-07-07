@@ -93,6 +93,7 @@ Resources:
                 - 's3:Get*'
               Resource:
                 - !Sub "arn:aws:s3:::${s3Bucket}"
+                - !Sub "arn:aws:s3:::${s3Bucket}/*"
 
       Timeout: 900
       VpcConfig:
