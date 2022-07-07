@@ -68,6 +68,7 @@ Resources:
               }
       FunctionName: !Sub "${LambdaFnName}"
       MemorySize: 4096
+      EphemeralStorage: 2048
       PackageType: Image
       Policies:
         - Version: '2012-10-17'
