@@ -212,14 +212,14 @@ def restore_s3_to_postgres(db_args):
 	logger.info('Retrieving latest backup: '+latest_backup_filename)
 
 	s3 = boto3.client('s3')
-	s3.download_file(db_args['s3_bucket'], latest_backup_filename, latest_backup_filename)
+	s3.download_file(db_args['s3_bucket'], latest_backup_filename, '/tmp/'+latest_backup_filename)
 
 	# -h {DB_HOST} -U {DB_USER}
 	dropdb_cmd  = 'dropdb {DB_NAME}'.format(DB_NAME=db_args['db_name'])
 	createdb_cmd  = 'createdb {DB_NAME}'.format(DB_NAME=db_args['db_name'])
 	restore_cmd = 'pg_restore -Fc -v -d {DB_NAME} {FILENAME}'.format(
 		DB_NAME=db_args['db_name'],
-		FILENAME=latest_backup_filename)
+		FILENAME='/tmp/'+latest_backup_filename)
 
 	pg_env = os.environ.copy()
 	pg_env["PGUSER"] = db_args['db_user']
@@ -247,7 +247,7 @@ def restore_s3_to_postgres(db_args):
 		return {'err_msg': error_message}
 
 	logger.info("Restoring dump {dumpfile} to DB {DB} at host {HOST}...".format(
-		dumpfile=latest_backup_filename,DB=db_args['db_name'], HOST=db_args['db_host']))
+		dumpfile='/tmp/'+latest_backup_filename,DB=db_args['db_name'], HOST=db_args['db_host']))
 	process_dbrestore = subprocess.Popen(restore_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
 	exitcode_dbrestore = process_dbrestore.wait()
 
