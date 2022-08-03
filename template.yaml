@@ -21,6 +21,36 @@ Resources:
     Properties:
       Description: Lambda function to backup or restore a postgres databases to or from S3
       Events:
+        chipmunkDevBackups:
+          Type: Schedule
+          Properties:
+            Name: ChipmunkDevNightlyBackupSchedule
+            Description: Run nightly at 9 PM UTC
+            Enabled: True
+            Schedule: "cron(0 21 * * ? *)"
+            Input: !Sub |
+              {
+                "action": "backup",
+                "target_env": "dev",
+                "identifier": "chipmunk",
+                "region": "${AWS::Region}",
+                "s3_bucket": "${s3Bucket}"
+              }
+        chipmunkProdBackups:
+          Type: Schedule
+          Properties:
+            Name: ChipmunkProdNightlyBackupSchedule
+            Description: Run nightly at 9 PM UTC
+            Enabled: True
+            Schedule: "cron(0 21 * * ? *)"
+            Input: !Sub |
+              {
+                "action": "backup",
+                "target_env": "production",
+                "identifier": "chipmunk",
+                "region": "${AWS::Region}",
+                "s3_bucket": "${s3Bucket}"
+              }
         curationAlphaBackups:
           Type: Schedule
           Properties:
@@ -63,36 +93,6 @@ Resources:
                 "action": "backup",
                 "target_env": "production",
                 "identifier": "curation",
-                "region": "${AWS::Region}",
-                "s3_bucket": "${s3Bucket}"
-              }
-        chipmunkDevBackups:
-          Type: Schedule
-          Properties:
-            Name: ChipmunkDevNightlyBackupSchedule
-            Description: Run nightly at 9 PM UTC
-            Enabled: True
-            Schedule: "cron(0 21 * * ? *)"
-            Input: !Sub |
-              {
-                "action": "backup",
-                "target_env": "dev",
-                "identifier": "chipmunk",
-                "region": "${AWS::Region}",
-                "s3_bucket": "${s3Bucket}"
-              }
-        chipmunkProdBackups:
-          Type: Schedule
-          Properties:
-            Name: ChipmunkProdNightlyBackupSchedule
-            Description: Run nightly at 9 PM UTC
-            Enabled: True
-            Schedule: "cron(0 21 * * ? *)"
-            Input: !Sub |
-              {
-                "action": "backup",
-                "target_env": "production",
-                "identifier": "chipmunk",
                 "region": "${AWS::Region}",
                 "s3_bucket": "${s3Bucket}"
               }
