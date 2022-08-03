@@ -96,6 +96,51 @@ Resources:
                 "region": "${AWS::Region}",
                 "s3_bucket": "${s3Bucket}"
               }
+        matiAlphaBackups:
+          Type: Schedule
+          Properties:
+            Name: MatiAlphaNightlyBackupSchedule
+            Description: Run nightly at 9 PM UTC
+            Enabled: True
+            Schedule: "cron(0 21 * * ? *)"
+            Input: !Sub |
+              {
+                "action": "backup",
+                "target_env": "alpha",
+                "identifier": "mati",
+                "region": "${AWS::Region}",
+                "s3_bucket": "${s3Bucket}"
+              }
+        matiBetaBackups:
+          Type: Schedule
+          Properties:
+            Name: MatiBetaNightlyBackupSchedule
+            Description: Run nightly at 9 PM UTC
+            Enabled: True
+            Schedule: "cron(0 21 * * ? *)"
+            Input: !Sub |
+              {
+                "action": "backup",
+                "target_env": "beta",
+                "identifier": "mati",
+                "region": "${AWS::Region}",
+                "s3_bucket": "${s3Bucket}"
+              }
+        matiProdBackups:
+          Type: Schedule
+          Properties:
+            Name: MatiProdNightlyBackupSchedule
+            Description: Run nightly at 9 PM UTC
+            Enabled: True
+            Schedule: "cron(0 21 * * ? *)"
+            Input: !Sub |
+              {
+                "action": "backup",
+                "target_env": "production",
+                "identifier": "mati",
+                "region": "${AWS::Region}",
+                "s3_bucket": "${s3Bucket}"
+              }
       FunctionName: !Sub "${LambdaFnName}"
       MemorySize: 4096
       EphemeralStorage:
