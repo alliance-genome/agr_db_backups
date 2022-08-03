@@ -66,6 +66,36 @@ Resources:
                 "region": "${AWS::Region}",
                 "s3_bucket": "${s3Bucket}"
               }
+        chipmunkDevBackups:
+          Type: Schedule
+          Properties:
+            Name: ChipmunkDevNightlyBackupSchedule
+            Description: Run nightly at 9 PM UTC
+            Enabled: True
+            Schedule: "cron(0 21 * * ? *)"
+            Input: !Sub |
+              {
+                "action": "backup",
+                "target_env": "dev",
+                "identifier": "chipmunk",
+                "region": "${AWS::Region}",
+                "s3_bucket": "${s3Bucket}"
+              }
+        chipmunkProdBackups:
+          Type: Schedule
+          Properties:
+            Name: ChipmunkProdNightlyBackupSchedule
+            Description: Run nightly at 9 PM UTC
+            Enabled: True
+            Schedule: "cron(0 21 * * ? *)"
+            Input: !Sub |
+              {
+                "action": "backup",
+                "target_env": "production",
+                "identifier": "chipmunk",
+                "region": "${AWS::Region}",
+                "s3_bucket": "${s3Bucket}"
+              }
       FunctionName: !Sub "${LambdaFnName}"
       MemorySize: 4096
       EphemeralStorage:
