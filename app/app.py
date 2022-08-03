@@ -128,7 +128,7 @@ def get_args_dict(event, arg_set):
 	logger.info('Setting up ssm client...')
 	ssm_client = boto3.client('ssm', region_name=return_args['region'])
 	logger.info('Defining ssm parameter name template...')
-	ssm_parameter_name = '/{{env}}/cron/backup/{identifier}/{{keyname}}'.format(identifier=return_args['identifier'])
+	ssm_parameter_name = '/{identifier}/{{env}}/db/backup/{{keyname}}'.format(identifier=return_args['identifier'])
 
 	for arg_key, ssm_key in arg_set.items():
 		logger.debug('\tDefining {}...'.format(arg_key))
