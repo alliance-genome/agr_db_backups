@@ -165,7 +165,7 @@ def backup_postgres_to_s3(db_args):
 	backup_command = 'pg_dump -Fc -v -d {DB_NAME}'.format(DB_NAME=db_args['db_name'])
 
 	now_datetime_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-	filename = '{env}-{identifier}-{date}.dump'.format(env=db_args['target_env'], identifier=db_args['identifier'], date=now_datetime_str)
+	filename = '{identifier}/{env}/{date}.dump'.format(identifier=db_args['identifier'], env=db_args['target_env'], date=now_datetime_str)
 	s3_target = 's3://{s3_bucket}/{filename}'.format(s3_bucket=db_args['s3_bucket'], filename=filename)
 	s3_transport_params = {
 		'client': boto3.client('s3', region_name=db_args['region']),
@@ -205,21 +205,23 @@ def restore_s3_to_postgres(db_args):
 	logger = logging.getLogger(__name__)
 
 	# now_datetime_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-	filename_prefix = '{env}-{identifier}-'.format(env=db_args['src_env'], identifier=db_args['identifier'])
+	filename_prefix = '{identifier}/{env}/'.format(identifier=db_args['identifier'], env=db_args['src_env'])
 	# s3_target = 's3://{s3_bucket}/{filename}'.format(s3_bucket=db_args['s3_bucket'], filename=filename_prefix)
 
-	latest_backup_filename = get_latest_s3_backup(db_args['s3_bucket'], filename_prefix)
-	logger.info('Retrieving latest backup: '+latest_backup_filename)
+	latest_backup_s3_filepath = get_latest_s3_backup(db_args['s3_bucket'], filename_prefix)
+	tmp_local_filepath = '/tmp/'+latest_backup_s3_filepath.replace('/','-')
+
+	logger.info('Retrieving latest backup: '+latest_backup_s3_filepath)
 
 	s3 = boto3.client('s3')
-	s3.download_file(db_args['s3_bucket'], latest_backup_filename, '/tmp/'+latest_backup_filename)
+	s3.download_file(db_args['s3_bucket'], latest_backup_s3_filepath, tmp_local_filepath)
 
 	# -h {DB_HOST} -U {DB_USER}
 	dropdb_cmd  = 'dropdb {DB_NAME}'.format(DB_NAME=db_args['db_name'])
 	createdb_cmd  = 'createdb {DB_NAME}'.format(DB_NAME=db_args['db_name'])
 	restore_cmd = 'pg_restore -Fc -v -d {DB_NAME} {FILENAME}'.format(
 		DB_NAME=db_args['db_name'],
-		FILENAME='/tmp/'+latest_backup_filename)
+		FILENAME=tmp_local_filepath)
 
 	pg_env = os.environ.copy()
 	pg_env["PGUSER"] = db_args['db_user']
@@ -247,7 +249,7 @@ def restore_s3_to_postgres(db_args):
 		return {'err_msg': error_message}
 
 	logger.info("Restoring dump {dumpfile} to DB {DB} at host {HOST}...".format(
-		dumpfile='/tmp/'+latest_backup_filename,DB=db_args['db_name'], HOST=db_args['db_host']))
+		dumpfile=tmp_local_filepath,DB=db_args['db_name'], HOST=db_args['db_host']))
 	process_dbrestore = subprocess.Popen(restore_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
 	exitcode_dbrestore = process_dbrestore.wait()
 
