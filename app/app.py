@@ -170,7 +170,7 @@ def backup_postgres_to_s3(db_args):
 	s3_transport_params = {
 		'client': boto3.client('s3', region_name=db_args['region']),
 		'client_kwargs': {
-			'S3.Client.create_multipart_upload': {'StorageClass': 'STANDARD_IA'}
+			'S3.Client.create_multipart_upload': {'StorageClass': 'GLACIER_IR'}
 		}
 	}
 	with open(s3_target, 'wb', transport_params=s3_transport_params) as wout:
