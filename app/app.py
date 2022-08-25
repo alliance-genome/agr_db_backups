@@ -219,7 +219,7 @@ def restore_s3_to_postgres(db_args):
 	# -h {DB_HOST} -U {DB_USER}
 	dropdb_cmd  = 'dropdb {DB_NAME}'.format(DB_NAME=db_args['db_name'])
 	createdb_cmd  = 'createdb {DB_NAME}'.format(DB_NAME=db_args['db_name'])
-	restore_cmd = 'pg_restore -Fc -v -d {DB_NAME} {FILENAME}'.format(
+	restore_cmd = 'pg_restore -Fc -v -j 8 -d {DB_NAME} {FILENAME}'.format(
 		DB_NAME=db_args['db_name'],
 		FILENAME=tmp_local_filepath)
 
