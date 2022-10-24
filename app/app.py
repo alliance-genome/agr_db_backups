@@ -6,23 +6,18 @@ from smart_open import open
 
 import boto3
 
-def lambda_handler(event, context):
+import importlib
+from interfaces.helper import SSM_ARG_PARAMS
+lambda_interface = importlib.import_module('interfaces.lambda')
+cli_interface    = importlib.import_module('interfaces.cli')
 
-	logger = logging.getLogger(context.function_name)
+def main(options):
 
-	logger.info('Retrieving input args...')
+	logger = logging.getLogger(__name__)
 
-	DB_ARG_PARAMS = {       #key-value pairs matching {`input_param_name`: `ssm_param_key`}
-		'db_host' :     'host',
-		'db_name' :     'name',
-		'db_user' :     'user',
-		'db_password' : 'password',
-		's3_bucket' :   'bucket'
-	};
-	args_response = get_args_dict(event, DB_ARG_PARAMS)
-	if 'help' in args_response:
-		logger.info(args_response['help'])
-		return args_response['help']
+	logger.info('Processing input args...')
+
+	args_response = get_args_dict(options, SSM_ARG_PARAMS)
 	if 'err_msg' in args_response:
 		err_msg = 'Error while retrieving args: '+args_response['err_msg']
 		logger.error(err_msg)
@@ -47,37 +42,11 @@ def lambda_handler(event, context):
 		logger.error(err_msg)
 		raise Exception(err_msg)
 
-	return {
-		'message' : '{action} completed successfully.'.format(action=db_args['action'])
-	}
+	return '{action} completed successfully.'.format(action=db_args['action'])
 
-def get_args_dict(event, arg_set):
+def get_args_dict(options, arg_set):
 
 	logger = logging.getLogger(__name__)
-
-	help_json = {
-		"description": "This function can backup any AGR database or restore an earlier made"+
-		               " backup to the same or a different environment (e.g. for data roll-down)."+
-		               " Send in a json payload with one or more of the below options as key-value pairs.",
-		"options": {
-			"action":       "Define an action to perform. Value must be either 'backup' or 'restore'.",
-			"db_host":      "Host URL of target DB. Defaults to AWS SSM parameter store value.",
-			"db_name":      "DB name of target DB. Defaults to AWS SSM parameter store value.",
-			"db_password":  "DB password for target DB. Defaults to AWS SSM parameter store value.",
-			"db_user":      "DB username for target DB. Defaults to AWS SSM parameter store value.",
-			"help":         "Print this help text (provide any value).",
-			"identifier":   "Application identifier to backup/restore for (for example 'curation').",
-			"prod_restore": "Extra flag to prevent accidental restores to 'production' environments."+
-			                " Define this argument as 'true' to confirm intend to do a production environment restore.",
-			"region":       "AWS region to retrieve/write backups from/to. Defaults to 'us-east-1'.",
-			"s3_bucket":    "AWS S3 bucket name to retrieve/write backups from/to. Defaults to AWS SSM parameter store value.",
-			"src_env":      "The source environment to find a backup from to restore."+
-			                " Defaults to 'production', only relevant for restore action.",
-			"target_env":   "The target environment to backup/restore from/to. Defaults to 'dev'."
-		}
-	}
-	if 'help' in event:
-		return {'help': help_json}
 
 	#Default values
 	return_args = {
@@ -87,26 +56,26 @@ def get_args_dict(event, arg_set):
 	}
 
 	#Input argument validation
-	if 'action' in event:
-		if event['action'] not in ('backup', 'restore'):
+	if 'action' in options:
+		if options['action'] not in ('backup', 'restore'):
 			error_message = "Argument action can only have value 'backup' or 'restore'"
 			return {'err_msg': error_message}
 
-		return_args['action'] = event['action']
+		return_args['action'] = options['action']
 	else:
 		error_message = "Missing input argument action"
 		return {'err_msg': error_message}
 
-	if 'identifier' in event:
-		return_args['identifier'] = event['identifier']
+	if 'identifier' in options:
+		return_args['identifier'] = options['identifier']
 	else:
 		error_message = "Missing input argument identifier"
 		return {'err_msg': error_message}
 
-	if 'target_env' in event:
-		return_args['target_env'] = event['target_env']
-	if 'src_env' in event:
-		return_args['src_env'] = event['src_env']
+	if 'target_env' in options:
+		return_args['target_env'] = options['target_env']
+	if 'src_env' in options:
+		return_args['src_env'] = options['src_env']
 
 	# Prevent data roll-up from environments with lower data integrity
 	# to environments with higher data integrity
@@ -117,12 +86,12 @@ def get_args_dict(event, arg_set):
 
 	# Prevent accidental production environment restore
 	if return_args['action'] == 'restore' and return_args['target_env'] == 'production':
-		if 'prod_restore' not in event or event['prod_restore'] != 'true':
+		if 'prod_restore' not in options or options['prod_restore'] != 'true':
 			error_message = "Action 'restore' to target env production requested, but prod_restore is not defined as 'true'."
 			return {'err_msg': error_message}
 
-	if 'region' in event:
-		return_args['region'] = event['region']
+	if 'region' in options:
+		return_args['region'] = options['region']
 
 	# Retrieve database details from ssm if not defined directly
 	logger.info('Setting up ssm client...')
@@ -132,14 +101,14 @@ def get_args_dict(event, arg_set):
 
 	for arg_key, ssm_key in arg_set.items():
 		logger.debug('\tDefining {}...'.format(arg_key))
-		if arg_key in event and event[arg_key] != "":
-			return_args[arg_key] = event[arg_key]
+		if arg_key in options and options[arg_key] != "":
+			return_args[arg_key] = options[arg_key]
 		else:
 			logger.debug("\t\tRetrieving {} from SSM...".format(arg_key))
 
 			env = ''
 			#For restore action calls, fetch s3_bucket from src_env rather than target_env (to ensure correct src file retrieval)
-			if event['action'] == 'restore' and arg_key == 's3_bucket':
+			if options['action'] == 'restore' and arg_key == 's3_bucket':
 				env = return_args['src_env']
 			#In all other cases, target_env value from SSM
 			else:
@@ -301,3 +270,10 @@ def env_rank(env_name):
 	# If the environment name is unkown, rank it below all known envs
 	else:
 		return max(ENV_RANK.values())+1
+
+def lambda_handler(event, context):
+	response = lambda_interface.lambda_handler(event, context)
+	return response
+
+if __name__ == '__main__':
+    cli_interface.cli_handler()
