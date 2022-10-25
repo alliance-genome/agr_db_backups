@@ -101,7 +101,8 @@ def get_args_dict(options, arg_set):
 
 	for arg_key, ssm_key in arg_set.items():
 		logger.debug('\tDefining {}...'.format(arg_key))
-		if arg_key in options and options[arg_key] != "":
+		if arg_key in options and options[arg_key] != None and options[arg_key] != "":
+			logger.debug("\t\tRetrieving {} from options...".format(arg_key))
 			return_args[arg_key] = options[arg_key]
 		else:
 			logger.debug("\t\tRetrieving {} from SSM...".format(arg_key))
