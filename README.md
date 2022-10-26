@@ -169,3 +169,9 @@ Such manual invocations will produce output like the following on STDOUT on succ
 ```
 , or report a non-200 `StatusCode` or `"FunctionError": "Unhandled"` in its reported status on failure.
 The output of the function, which can contain more details on failure, can be found in the `lambda.output` file.
+
+As another option, the ECS docker image can be invoked directly, and the application execution configured through CLI options.
+```bash
+docker build -f ECS.Dockerfile -t agr_db_backups_ecs .
+docker run --rm -it -v ~/.aws:/root/.aws -e AWS_PROFILE=agr agr_db_backups_ecs --help
+```
