@@ -1,7 +1,7 @@
 FROM public.ecr.aws/lambda/python:3.8
 
 # Copy function code
-COPY app/* ${LAMBDA_TASK_ROOT}/
+COPY app/ ${LAMBDA_TASK_ROOT}/
 
 # Install function's python library dependencies
 WORKDIR ${LAMBDA_TASK_ROOT}
