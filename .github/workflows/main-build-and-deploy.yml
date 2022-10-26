@@ -5,6 +5,15 @@ on:
     branches:
       - main
 jobs:
+  print-github-action-contexts:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Print github
+        run: |
+          echo '${{ toJSON(github) }}'
+      - name: Print github.event
+        run: |
+          echo '${{ toJSON(github.event) }}'
   build-sam:
     if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
     runs-on: ubuntu-20.04
