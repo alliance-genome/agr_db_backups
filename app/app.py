@@ -219,7 +219,13 @@ def restore_s3_to_postgres(db_args):
 	logging.info("Restoring dump {dumpfile} to DB {DB} at host {HOST}...".format(
 		dumpfile=tmp_local_filepath,DB=db_args['db_name'], HOST=db_args['db_host']))
 	process_dbrestore = subprocess.Popen(restore_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
+
+	for line in iter(lambda: process_dbrestore.stderr.readline(), b''):
+		logging.debug(line)
+
 	exitcode_dbrestore = process_dbrestore.wait()
+
+	logging.debug("Dump restore process exited.")
 
 	# Currently every restore to a non-RDS location "fails" because
 	# the role "rdsadmin" does not exist on local postgres installations.
