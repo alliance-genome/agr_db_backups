@@ -58,7 +58,7 @@ def get_args_dict(options, arg_set):
 	}
 
 	#Input argument validation
-	if 'action' in options:
+	if 'action' in options and options['action'] != None:
 		if options['action'] not in ('backup', 'restore'):
 			error_message = "Argument action can only have value 'backup' or 'restore'"
 			return {'err_msg': error_message}
@@ -68,15 +68,15 @@ def get_args_dict(options, arg_set):
 		error_message = "Missing input argument action"
 		return {'err_msg': error_message}
 
-	if 'identifier' in options:
+	if 'identifier' in options and options['identifier'] != None:
 		return_args['identifier'] = options['identifier']
 	else:
 		error_message = "Missing input argument identifier"
 		return {'err_msg': error_message}
 
-	if 'target_env' in options:
+	if 'target_env' in options and options['target_env'] != None:
 		return_args['target_env'] = options['target_env']
-	if 'src_env' in options:
+	if 'src_env' in options and options['src_env'] != None:
 		return_args['src_env'] = options['src_env']
 
 	# Prevent data roll-up from environments with lower data integrity
@@ -92,7 +92,7 @@ def get_args_dict(options, arg_set):
 			error_message = "Action 'restore' to target env production requested, but prod_restore is not defined as 'true'."
 			return {'err_msg': error_message}
 
-	if 'region' in options:
+	if 'region' in options and options['region'] != None:
 		return_args['region'] = options['region']
 
 	# Retrieve database details from ssm if not defined directly
