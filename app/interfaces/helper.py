@@ -9,6 +9,7 @@ APP_OPTIONS = {
 	"db_user":      "DB username for target DB. Defaults to AWS SSM parameter store value.",
 	"help":         "Print this help text (provide any value).",
 	"identifier":   "Application identifier to backup/restore for (for example 'curation').",
+	"loglevel":     "Set logging level. Must be one of DEBUG, INFO, WARNING, ERROR or CRITICAL.",
 	"prod_restore": "Extra flag to prevent accidental restores to 'production' environments."+
 					" Define this argument as 'true' to confirm intend to do a production environment restore.",
 	"region":       "AWS region to retrieve/write backups from/to. Defaults to 'us-east-1'.",
