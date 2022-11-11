@@ -43,7 +43,8 @@ def event_data_to_CMD(event_data):
         TODO: Figure out possibility to reuse the app.interfaces.helper module to return help directly?"""
     CMD = []
     for key, value in event_data.items():
-        CMD.append(key)
-        CMD.append(value)
+        CMD.append('--'+key)
+        if key != 'help':
+            CMD.append(value)
 
     return CMD
