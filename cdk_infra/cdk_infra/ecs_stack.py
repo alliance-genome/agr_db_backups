@@ -9,13 +9,23 @@ from aws_cdk import (
 
 class EcsCluster:
 
+    cluster = None
+
     def __init__(self, scope: Stack) -> None:
 
         # Create the ECS cluster
         vpc = ec2.Vpc.from_lookup(scope, "AgrVpc", vpc_id = "vpc-55522232")
-        ecs.Cluster(scope, "AgrDbBackupsCluster", vpc=vpc)
+        self.cluster = ecs.Cluster(scope, "AgrDbBackupsCluster", vpc=vpc)
+
+    def get_cluster_arn(self) -> str:
+        return self.cluster.cluster_arn
+
+    def get_cluster_name(self) -> str:
+        return self.cluster.cluster_name
 
 class EcsTaskDefinition:
+
+    task_def = None
 
     def __init__(self, scope: Stack) -> None:
 
@@ -79,3 +89,42 @@ class EcsTaskDefinition:
                 ecr.Repository.from_repository_name(scope, "EcrRepo", "agr_db_backups_ecs"), tag="latest"),
             logging=ecs.AwsLogDriver(stream_prefix=task_definition.family)
         )
+
+        self.task_def = task_definition
+
+    def get_task_def_arn(self) -> str:
+        return self.task_def.task_definition_arn
+
+    def get_container_name(self) -> str:
+        return self.task_def.default_container.container_name
+
+    def get_aws_log_url_template(self) -> str:
+        url = None
+        log_driver_config = self.task_def.default_container.log_driver_config
+
+        if self.task_def.default_container.log_driver_config.log_driver == 'awslogs':
+            log_config_options = self.task_def.default_container.log_driver_config.options
+            url_template = 'https://{region}.console.aws.amazon.com/cloudwatch/home'
+            url_template += '?region={region}#logsV2:log-groups/log-group/{log_group_name}'
+            url_template += '/log-events/{stream_prefix}$252F{container_name}$252F{{}}'
+
+            url = url_template.format(
+                region=log_config_options['awslogs-region'],
+                log_group_name=log_config_options['awslogs-group'],
+                stream_prefix=log_config_options['awslogs-stream-prefix'],
+                container_name=self.get_container_name()
+            )
+
+        return url
+
+    def get_ecs_task_detail_url_template(self, cluster_name) -> str:
+        url_template = 'https://{region}.console.aws.amazon.com/ecs/home?region={region}#'
+        url_template += '/clusters/{cluster_name}'
+        url_template += '/tasks/{{}}/details'
+
+        url = url_template.format(
+            region=self.task_def.env.region,
+            cluster_name=cluster_name
+        )
+
+        return url
