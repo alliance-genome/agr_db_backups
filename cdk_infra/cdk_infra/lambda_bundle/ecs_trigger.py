@@ -2,9 +2,23 @@ import logging
 import os
 import boto3
 
+from helper import APP_DESCRIPTION, APP_OPTIONS
+
 def lambda_handler(event, context):
 
     logger = logging.getLogger(context.function_name)
+
+    help_json = {
+        "description": APP_DESCRIPTION+
+                       " Send in a json payload with one or more of the below options as key-value pairs."+
+                       " Backup/restore will get executed through ECS (async) and URLs for tracking the ECS task"+
+                       " status and viewing the logs will be returned (sync).",
+        "options": APP_OPTIONS
+    }
+
+    if 'help' in event:
+        logger.info(help_json)
+        return help_json
 
     cmd_overwrite = event_data_to_CMD(event)
 
@@ -39,12 +53,11 @@ def lambda_handler(event, context):
 
 def event_data_to_CMD(event_data):
     """This function parses lambda event data and
-        returns it as CMD arguments for the ECS task to take as CMD overwrite (as input args).
-        TODO: Figure out possibility to reuse the app.interfaces.helper module to return help directly?"""
+        returns it as CMD arguments for the ECS task to take as CMD overwrite (as input args)."""
+
     CMD = []
     for key, value in event_data.items():
         CMD.append('--'+key)
-        if key != 'help':
-            CMD.append(value)
+        CMD.append(value)
 
     return CMD

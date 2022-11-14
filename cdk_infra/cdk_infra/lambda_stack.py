@@ -1,4 +1,5 @@
-from os import path
+import os
+import shutil
 
 from aws_cdk import Duration, Stack
 from aws_cdk import aws_iam as iam
@@ -19,12 +20,17 @@ class LambdaEcsTrigger:
             ]
         )
 
+        # Copy helper file into lambda bundle
+        dirname = os.path.dirname(os.path.realpath(__file__))
+        shutil.copyfile(os.path.join(dirname, '..','..','app','interfaces','helper.py'),
+                        os.path.join(dirname, 'lambda_bundle', 'helper.py'))
+
         # Create lambda function
         aws_lambda.Function(scope, "agrDbBackupsLambdaTrigger",
             function_name='agr_db_backups_ecs',
             runtime=aws_lambda.Runtime.PYTHON_3_7,
             handler="ecs_trigger.lambda_handler",
-            code=aws_lambda.Code.from_asset(path.join(path.dirname(path.realpath(__file__)), "lambda_bundle")),
+            code=aws_lambda.Code.from_asset(os.path.join(dirname, "lambda_bundle")),
             environment={
                 'AGRDB_ECS_CLUSTER': ecs_cluster_arn,
                 'AGRDB_ECS_TASK_DEF': ecs_task_def_arn,
@@ -34,3 +40,5 @@ class LambdaEcsTrigger:
             },
             role=excecution_role,
             timeout=Duration.seconds(60))
+
+        os.remove(os.path.join(dirname, 'lambda_bundle', 'helper.py'))
