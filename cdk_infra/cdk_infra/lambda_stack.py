@@ -10,10 +10,11 @@ class LambdaEcsTrigger:
     def __init__(self, scope: Stack, ecs_cluster_arn: str, ecs_task_def_arn: str,
                     container_name: str, log_url_template: str, task_details_template: str) -> None:
 
-        # Create lambda task role
+        # Create lambda function role
         excecution_role = iam.Role(scope, "agr-db-backups-lambda-role",
             assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
             managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole"),
                 iam.ManagedPolicy.from_aws_managed_policy_name("AmazonECS_FullAccess")
             ]
         )
