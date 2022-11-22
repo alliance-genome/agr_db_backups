@@ -1,4 +1,3 @@
-#TODO: adjust this dockerfile for standard ECS calling (lambda ENTRYPOINT can not be overwritten in ECS)
 FROM public.ecr.aws/amazonlinux/amazonlinux:2
 
 # Install python
