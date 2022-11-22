@@ -6,7 +6,13 @@ from helper import APP_DESCRIPTION, APP_OPTIONS
 
 def lambda_handler(event, context):
 
-    logger = logging.getLogger(context.function_name)
+    log_level = 'INFO'
+    if 'loglevel' in event and event['loglevel'] != None:
+        log_level = event['loglevel'].upper()
+
+    logging.getLogger().setLevel(os.environ.get("LOGLEVEL", log_level))
+
+    logging.info("Event data received:\n"+str(event))
 
     help_json = {
         "description": APP_DESCRIPTION+
@@ -17,7 +23,7 @@ def lambda_handler(event, context):
     }
 
     if 'help' in event:
-        logger.info(help_json)
+        logging.info("Help response:\n"+str(help_json))
         return help_json
 
     cmd_overwrite = event_data_to_CMD(event)
@@ -49,7 +55,11 @@ def lambda_handler(event, context):
     task_logs_url = os.environ.get('AGRDB_LOG_URL_TEMPLATE').format(task_short_name)
     task_details_url = os.environ.get('AGRDB_ECS_TASK_DETAILS_URL_TEMPLATE').format(task_short_name)
 
-    return { 'initiated_task_arn': task_arn, 'task_logs_url': task_logs_url, 'task_details_url': task_details_url }
+    response = { 'initiated_task_arn': task_arn, 'task_logs_url': task_logs_url, 'task_details_url': task_details_url }
+
+    logging.info("Function response returned:\n"+str(response))
+
+    return response
 
 def event_data_to_CMD(event_data):
     """This function parses lambda event data and
