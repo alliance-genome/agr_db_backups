@@ -13,40 +13,42 @@ cli_interface    = importlib.import_module('interfaces.cli')
 
 def main(options):
 
-	logger = logging.getLogger(__name__)
+	log_level = 'INFO'
+	if 'loglevel' in options and options['loglevel'] != None:
+		log_level = options['loglevel'].upper()
 
-	logger.info('Processing input args...')
+	logging.basicConfig(level=os.environ.get("LOGLEVEL", log_level))
+
+	logging.info('Processing input args...')
 
 	args_response = get_args_dict(options, SSM_ARG_PARAMS)
 	if 'err_msg' in args_response:
 		err_msg = 'Error while retrieving args: '+args_response['err_msg']
-		logger.error(err_msg)
+		logging.error(err_msg)
 		raise Exception(err_msg)
 
 	db_args = args_response['db_args']
-	logger.info('target_env: '+db_args['target_env'])
-	logger.info('identifier: '+db_args['identifier'])
-	logger.debug('db_args: {}'.format(db_args))
+	logging.info('target_env: '+db_args['target_env'])
+	logging.info('identifier: '+db_args['identifier'])
+	logging.debug('db_args: {}'.format(db_args))
 
 	response = []
 	if db_args['action'] == 'backup':
-		logger.info('Creating backup to S3...')
+		logging.info('Creating backup to S3...')
 		response = backup_postgres_to_s3(db_args)
 	elif db_args['action'] == 'restore':
-		logger.info('Restoring backup from S3...')
+		logging.info('Restoring backup from S3...')
 		response = restore_s3_to_postgres(db_args)
 
 	if 'err_msg' in response:
 		err_msg = 'Error while running {action}: {msg}'.format(
 			action=db_args['action'], msg=response['err_msg'])
-		logger.error(err_msg)
+		logging.error(err_msg)
 		raise Exception(err_msg)
 
 	return '{action} completed successfully.'.format(action=db_args['action'])
 
 def get_args_dict(options, arg_set):
-
-	logger = logging.getLogger(__name__)
 
 	#Default values
 	return_args = {
@@ -56,7 +58,7 @@ def get_args_dict(options, arg_set):
 	}
 
 	#Input argument validation
-	if 'action' in options:
+	if 'action' in options and options['action'] != None:
 		if options['action'] not in ('backup', 'restore'):
 			error_message = "Argument action can only have value 'backup' or 'restore'"
 			return {'err_msg': error_message}
@@ -66,15 +68,15 @@ def get_args_dict(options, arg_set):
 		error_message = "Missing input argument action"
 		return {'err_msg': error_message}
 
-	if 'identifier' in options:
+	if 'identifier' in options and options['identifier'] != None:
 		return_args['identifier'] = options['identifier']
 	else:
 		error_message = "Missing input argument identifier"
 		return {'err_msg': error_message}
 
-	if 'target_env' in options:
+	if 'target_env' in options and options['target_env'] != None:
 		return_args['target_env'] = options['target_env']
-	if 'src_env' in options:
+	if 'src_env' in options and options['src_env'] != None:
 		return_args['src_env'] = options['src_env']
 
 	# Prevent data roll-up from environments with lower data integrity
@@ -90,22 +92,22 @@ def get_args_dict(options, arg_set):
 			error_message = "Action 'restore' to target env production requested, but prod_restore is not defined as 'true'."
 			return {'err_msg': error_message}
 
-	if 'region' in options:
+	if 'region' in options and options['region'] != None:
 		return_args['region'] = options['region']
 
 	# Retrieve database details from ssm if not defined directly
-	logger.info('Setting up ssm client...')
+	logging.info('Setting up ssm client...')
 	ssm_client = boto3.client('ssm', region_name=return_args['region'])
-	logger.info('Defining ssm parameter name template...')
+	logging.info('Defining ssm parameter name template...')
 	ssm_parameter_name = '/{identifier}/{{env}}/db/backup/{{keyname}}'.format(identifier=return_args['identifier'])
 
 	for arg_key, ssm_key in arg_set.items():
-		logger.debug('\tDefining {}...'.format(arg_key))
+		logging.debug('\tDefining {}...'.format(arg_key))
 		if arg_key in options and options[arg_key] != None and options[arg_key] != "":
-			logger.debug("\t\tRetrieving {} from options...".format(arg_key))
+			logging.debug("\t\tRetrieving {} from options...".format(arg_key))
 			return_args[arg_key] = options[arg_key]
 		else:
-			logger.debug("\t\tRetrieving {} from SSM...".format(arg_key))
+			logging.debug("\t\tRetrieving {} from SSM...".format(arg_key))
 
 			env = ''
 			#For restore action calls, fetch s3_bucket from src_env rather than target_env (to ensure correct src file retrieval)
@@ -116,7 +118,7 @@ def get_args_dict(options, arg_set):
 				env=return_args['target_env']
 
 			param_name = ssm_parameter_name.format(env=env, keyname=ssm_key)
-			logger.debug("\t\t... as param {param_name} for env {env}, identifier {identifier}".format(
+			logging.debug("\t\t... as param {param_name} for env {env}, identifier {identifier}".format(
 					env=env, identifier=return_args['identifier'], param_name=param_name))
 			try:
 				param = ssm_client.get_parameter(Name=param_name, WithDecryption=True)
@@ -129,8 +131,6 @@ def get_args_dict(options, arg_set):
 	return { 'db_args': return_args }
 
 def backup_postgres_to_s3(db_args):
-
-	logger = logging.getLogger(__name__)
 
 	backup_command = 'pg_dump -Fc -v -d {DB_NAME}'.format(DB_NAME=db_args['db_name'])
 
@@ -151,7 +151,7 @@ def backup_postgres_to_s3(db_args):
 
 		process = subprocess.Popen(backup_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, env=pg_env)
 
-		logger.info("Streaming backup to {}...".format(s3_target))
+		logging.info("Streaming backup to {}...".format(s3_target))
 		for c in iter(lambda: process.stdout.read(1), b''):
 			wout.write(c)
 
@@ -172,8 +172,6 @@ def restore_s3_to_postgres(db_args):
 	the latest DB dump found from the src_env
 	"""
 
-	logger = logging.getLogger(__name__)
-
 	# now_datetime_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 	filename_prefix = '{identifier}/{env}/'.format(identifier=db_args['identifier'], env=db_args['src_env'])
 	# s3_target = 's3://{s3_bucket}/{filename}'.format(s3_bucket=db_args['s3_bucket'], filename=filename_prefix)
@@ -181,7 +179,7 @@ def restore_s3_to_postgres(db_args):
 	latest_backup_s3_filepath = get_latest_s3_backup(db_args['s3_bucket'], filename_prefix)
 	tmp_local_filepath = '/tmp/'+latest_backup_s3_filepath.replace('/','-')
 
-	logger.info('Retrieving latest backup: '+latest_backup_s3_filepath)
+	logging.info('Retrieving latest backup: '+latest_backup_s3_filepath)
 
 	s3 = boto3.client('s3')
 	s3.download_file(db_args['s3_bucket'], latest_backup_s3_filepath, tmp_local_filepath)
@@ -198,7 +196,7 @@ def restore_s3_to_postgres(db_args):
 	pg_env["PGHOST"] = db_args['db_host']
 	pg_env["PGPASSWORD"] = db_args['db_password']
 
-	logger.info("Dropping DB {DB} at host {HOST}...".format(DB=db_args['db_name'], HOST=db_args['db_host']))
+	logging.info("Dropping DB {DB} at host {HOST}...".format(DB=db_args['db_name'], HOST=db_args['db_host']))
 	process_dbdrop = subprocess.Popen(dropdb_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
 	exitcode_dbdrop = process_dbdrop.wait()
 	if exitcode_dbdrop != 0:
@@ -208,7 +206,7 @@ def restore_s3_to_postgres(db_args):
 
 		return {'err_msg': error_message}
 
-	logger.info("Recreating DB {DB} at host {HOST}...".format(DB=db_args['db_name'], HOST=db_args['db_host']))
+	logging.info("Recreating DB {DB} at host {HOST}...".format(DB=db_args['db_name'], HOST=db_args['db_host']))
 	process_dbcreate = subprocess.Popen(createdb_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
 	exitcode_dbcreate = process_dbcreate.wait()
 	if exitcode_dbcreate != 0:
@@ -218,10 +216,16 @@ def restore_s3_to_postgres(db_args):
 
 		return {'err_msg': error_message}
 
-	logger.info("Restoring dump {dumpfile} to DB {DB} at host {HOST}...".format(
+	logging.info("Restoring dump {dumpfile} to DB {DB} at host {HOST}...".format(
 		dumpfile=tmp_local_filepath,DB=db_args['db_name'], HOST=db_args['db_host']))
 	process_dbrestore = subprocess.Popen(restore_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
+
+	for line in iter(lambda: process_dbrestore.stderr.readline(), b''):
+		logging.debug(line)
+
 	exitcode_dbrestore = process_dbrestore.wait()
+
+	logging.debug("Dump restore process exited.")
 
 	# Currently every restore to a non-RDS location "fails" because
 	# the role "rdsadmin" does not exist on local postgres installations.
@@ -236,12 +240,10 @@ def restore_s3_to_postgres(db_args):
 
 def get_latest_s3_backup(bucket_name, prefix):
 
-	logger = logging.getLogger(__name__)
-
 	s3 = boto3.client('s3')
 	paginator = s3.get_paginator( "list_objects_v2" )
 
-	logger.debug('Finding latest backup in bucket {bucket} with prefix {prefix}...'.format(bucket=bucket_name, prefix=prefix))
+	logging.debug('Finding latest backup in bucket {bucket} with prefix {prefix}...'.format(bucket=bucket_name, prefix=prefix))
 	page_iterator = paginator.paginate(Bucket=bucket_name, Prefix=prefix)
 	latest_all = None
 	for page in page_iterator:
