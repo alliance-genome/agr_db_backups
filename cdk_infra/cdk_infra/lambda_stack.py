@@ -4,6 +4,8 @@ import shutil
 from aws_cdk import Duration, Stack
 from aws_cdk import aws_iam as iam
 from aws_cdk import aws_lambda
+from aws_cdk import aws_events
+from aws_cdk import aws_events_targets
 
 
 class LambdaEcsTrigger:
@@ -20,13 +22,21 @@ class LambdaEcsTrigger:
             ]
         )
 
+        # Create nightly backup event rule (scheduled backup trigger)
+        nightly_backups_event_rule = aws_events.Rule(scope, "nightly-backup-schedule",
+            rule_name='NightlyBackupSchedule',
+            description='Run nightly at 9 PM UTC',
+            enabled=True,
+            schedule=aws_events.Schedule.cron(minute='0', hour='21', day='*', month='*', year='*')
+        )
+
         # Copy helper file into lambda bundle
         dirname = os.path.dirname(os.path.realpath(__file__))
         shutil.copyfile(os.path.join(dirname, '..','..','app','interfaces','helper.py'),
                         os.path.join(dirname, 'lambda_bundle', 'helper.py'))
 
         # Create lambda function
-        aws_lambda.Function(scope, "agrDbBackupsLambdaTrigger",
+        aws_lambda_fn = aws_lambda.Function(scope, "agrDbBackupsLambdaTrigger",
             function_name='agr_db_backups_ecs',
             runtime=aws_lambda.Runtime.PYTHON_3_7,
             handler="ecs_trigger.lambda_handler",
@@ -42,3 +52,35 @@ class LambdaEcsTrigger:
             timeout=Duration.seconds(60))
 
         os.remove(os.path.join(dirname, 'lambda_bundle', 'helper.py'))
+
+        # Add targets to nightly backup event rule for every DB requiring nightly backup
+
+        nightly_backup_targets = []    # Append an object to send as input payload for every DB requiring backup
+
+        # Curation alpha
+        nightly_backup_targets.append({
+            "action": "backup",
+            "target_env": "alpha",
+            "identifier": "curation",
+            "region": scope.region
+        })
+        # Curation beta
+        nightly_backup_targets.append({
+            "action": "backup",
+            "target_env": "beta",
+            "identifier": "curation",
+            "region": scope.region
+        })
+        # Curation prod
+        nightly_backup_targets.append({
+            "action": "backup",
+            "target_env": "production",
+            "identifier": "curation",
+            "region": scope.region
+        })
+
+        for event_obj in nightly_backup_targets:
+            nightly_backups_event_rule.add_target(aws_events_targets.LambdaFunction(
+                handler=aws_lambda_fn,
+                event=aws_events.RuleTargetInput.from_object(event_obj)
+            ))
