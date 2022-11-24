@@ -132,36 +132,39 @@ def get_args_dict(options, arg_set):
 
 def backup_postgres_to_s3(db_args):
 
-	backup_command = 'pg_dump -Fc -v -d {DB_NAME}'.format(DB_NAME=db_args['db_name'])
-
 	now_datetime_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 	filename = '{identifier}/{env}/{date}.dump'.format(identifier=db_args['identifier'], env=db_args['target_env'], date=now_datetime_str)
+
+	# Create local backup
+	tmp_local_filepath = '/tmp/'+filename.replace('/','-')
+
+	backup_command = 'pg_dump -Fc -v -d {DB_NAME} -f {FILE}'.format(DB_NAME=db_args['db_name'], FILE=tmp_local_filepath)
+
+	pg_env = os.environ.copy()
+	pg_env["PGUSER"] = db_args['db_user']
+	pg_env["PGHOST"] = db_args['db_host']
+	pg_env["PGPASSWORD"] = db_args['db_password']
+
+	logging.info("Storing backup to {}...".format(tmp_local_filepath))
+
+	process = subprocess.Popen(backup_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, env=pg_env)
+
+	exitcode = process.wait()
+	if exitcode != 0:
+		error_message = "pg_dump execution failed (exitcode {}).\n".format(exitcode)
+		out, err = process.communicate()
+		error_message += err.decode()
+
+		return {'err_msg': error_message}
+
+	# Upload backup to S3
 	s3_target = 's3://{s3_bucket}/{filename}'.format(s3_bucket=db_args['s3_bucket'], filename=filename)
-	s3_transport_params = {
-		'client': boto3.client('s3', region_name=db_args['region']),
-		'client_kwargs': {
-			'S3.Client.create_multipart_upload': {'StorageClass': 'GLACIER_IR'}
-		}
-	}
-	with open(s3_target, 'wb', transport_params=s3_transport_params) as wout:
-		pg_env = os.environ.copy()
-		pg_env["PGUSER"] = db_args['db_user']
-		pg_env["PGHOST"] = db_args['db_host']
-		pg_env["PGPASSWORD"] = db_args['db_password']
+	logging.info("Uploading backup to {}...".format(s3_target))
 
-		process = subprocess.Popen(backup_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, env=pg_env)
+	s3_client = boto3.client('s3')
 
-		logging.info("Streaming backup to {}...".format(s3_target))
-		for c in iter(lambda: process.stdout.read(1), b''):
-			wout.write(c)
-
-		exitcode = process.wait()
-		if exitcode != 0:
-			error_message = "pg_dump execution failed (exitcode {}).\n".format(exitcode)
-			out, err = process.communicate()
-			error_message += err.decode()
-
-			return {'err_msg': error_message}
+	s3_client.upload_file(tmp_local_filepath, db_args['s3_bucket'], filename,
+		ExtraArgs={'StorageClass': 'GLACIER_IR'})
 
 	return {}
 
