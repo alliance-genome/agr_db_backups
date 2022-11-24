@@ -149,11 +149,16 @@ def backup_postgres_to_s3(db_args):
 
 	process = subprocess.Popen(backup_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, env=pg_env)
 
+	stderr_str = ""
+	for line in iter(process.stderr.readline, b''):
+		decoded_str = line.decode().strip()
+		stderr_str += decoded_str+"\n"
+		logging.info(decoded_str)
+
 	exitcode = process.wait()
 	if exitcode != 0:
-		error_message = "pg_dump execution failed (exitcode {}).\n".format(exitcode)
-		out, err = process.communicate()
-		error_message += err.decode()
+		error_message = "pg_dump execution failed (exitcode {}).\n".format(exitcode)\
+		                +stderr_str
 
 		return {'err_msg': error_message}
 
@@ -201,21 +206,33 @@ def restore_s3_to_postgres(db_args):
 
 	logging.info("Dropping DB {DB} at host {HOST}...".format(DB=db_args['db_name'], HOST=db_args['db_host']))
 	process_dbdrop = subprocess.Popen(dropdb_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
+
+	stderr_str = ""
+	for line in iter(process_dbdrop.stderr.readline, b''):
+		decoded_str = line.decode().strip()
+		stderr_str += decoded_str+"\n"
+		logging.info(decoded_str)
+
 	exitcode_dbdrop = process_dbdrop.wait()
 	if exitcode_dbdrop != 0:
-		error_message = "dropdb execution failed (exitcode {}).\n".format(exitcode_dbdrop)
-		out, err = process_dbdrop.communicate()
-		error_message += err.decode()
+		error_message = "dropdb execution failed (exitcode {}).\n".format(exitcode_dbdrop)\
+		                +stderr_str
 
 		return {'err_msg': error_message}
 
 	logging.info("Recreating DB {DB} at host {HOST}...".format(DB=db_args['db_name'], HOST=db_args['db_host']))
 	process_dbcreate = subprocess.Popen(createdb_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
+
+	stderr_str = ""
+	for line in iter(process_dbdrop.stderr.readline, b''):
+		decoded_str = line.decode().strip()
+		stderr_str += decoded_str+"\n"
+		logging.info(decoded_str)
+
 	exitcode_dbcreate = process_dbcreate.wait()
 	if exitcode_dbcreate != 0:
-		error_message = "createdb execution failed (exitcode {}).\n".format(exitcode_dbcreate)
-		out, err = process_dbcreate.communicate()
-		error_message += err.decode()
+		error_message = "createdb execution failed (exitcode {}).\n".format(exitcode_dbcreate)\
+		                +stderr_str
 
 		return {'err_msg': error_message}
 
@@ -223,8 +240,11 @@ def restore_s3_to_postgres(db_args):
 		dumpfile=tmp_local_filepath,DB=db_args['db_name'], HOST=db_args['db_host']))
 	process_dbrestore = subprocess.Popen(restore_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
 
-	for line in iter(lambda: process_dbrestore.stderr.readline(), b''):
-		logging.debug(line)
+	stderr_str = ""
+	for line in iter(process_dbdrop.stderr.readline, b''):
+		decoded_str = line.decode().strip()
+		stderr_str += decoded_str+"\n"
+		logging.info(decoded_str)
 
 	exitcode_dbrestore = process_dbrestore.wait()
 
@@ -233,9 +253,8 @@ def restore_s3_to_postgres(db_args):
 	# Currently every restore to a non-RDS location "fails" because
 	# the role "rdsadmin" does not exist on local postgres installations.
 	if exitcode_dbrestore != 0:
-		error_message = "pg_restore execution failed (exitcode {}).\n".format(exitcode_dbrestore)
-		out, err = process_dbrestore.communicate()
-		error_message += err.decode()
+		error_message = "pg_restore execution failed (exitcode {}).\n".format(exitcode_dbrestore)\
+		                +stderr_str
 
 		return {'err_msg': error_message}
 
