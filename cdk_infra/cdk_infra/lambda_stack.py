@@ -58,12 +58,12 @@ class LambdaEcsTrigger:
         nightly_backup_targets = []    # Append an object to send as input payload for every DB requiring backup
 
         # Curation alpha
-        # nightly_backup_targets.append({
-        #     "action": "backup",
-        #     "target_env": "alpha",
-        #     "identifier": "curation",
-        #     "region": scope.region
-        # })
+        nightly_backup_targets.append({
+            "action": "backup",
+            "target_env": "alpha",
+            "identifier": "curation",
+            "region": scope.region
+        })
         # Curation beta
         nightly_backup_targets.append({
             "action": "backup",
