@@ -1,0 +1,17 @@
+[
+	{
+		"action": "backup",
+		"identifier": "curation",
+		"target_env": "alpha"
+	},
+	{
+		"action": "backup",
+		"identifier": "curation",
+		"target_env": "beta"
+	},
+	{
+		"action": "backup",
+		"identifier": "curation",
+		"target_env": "production"
+	}
+]
