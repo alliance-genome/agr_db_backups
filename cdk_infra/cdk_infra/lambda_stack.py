@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 
@@ -38,6 +39,7 @@ class LambdaEcsTrigger:
         # Create lambda function
         aws_lambda_fn = aws_lambda.Function(scope, "agrDbBackupsLambdaTrigger",
             function_name='agr_db_backups_ecs',
+            description='Lambda function to trigger a backup or restore of a postgres databases to or from S3, through ECS',
             runtime=aws_lambda.Runtime.PYTHON_3_7,
             handler="ecs_trigger.lambda_handler",
             code=aws_lambda.Code.from_asset(os.path.join(dirname, "lambda_bundle")),
@@ -54,30 +56,7 @@ class LambdaEcsTrigger:
         os.remove(os.path.join(dirname, 'lambda_bundle', 'helper.py'))
 
         # Add targets to nightly backup event rule for every DB requiring nightly backup
-
-        nightly_backup_targets = []    # Append an object to send as input payload for every DB requiring backup
-
-        # Curation alpha
-        nightly_backup_targets.append({
-            "action": "backup",
-            "target_env": "alpha",
-            "identifier": "curation",
-            "region": scope.region
-        })
-        # Curation beta
-        nightly_backup_targets.append({
-            "action": "backup",
-            "target_env": "beta",
-            "identifier": "curation",
-            "region": scope.region
-        })
-        # Curation prod
-        nightly_backup_targets.append({
-            "action": "backup",
-            "target_env": "production",
-            "identifier": "curation",
-            "region": scope.region
-        })
+        nightly_backup_targets = json.load(open(os.path.join(dirname, 'resources', 'backup_list.json'), 'r'))
 
         for event_obj in nightly_backup_targets:
             nightly_backups_event_rule.add_target(aws_events_targets.LambdaFunction(
