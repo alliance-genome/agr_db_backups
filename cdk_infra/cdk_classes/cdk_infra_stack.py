@@ -4,8 +4,8 @@ from aws_cdk import (
 
 from constructs import Construct
 
-from cdk_infra.ecs_stack import EcsCluster, EcsTaskDefinition
-from cdk_infra.lambda_stack import LambdaEcsTrigger
+from cdk_classes.ecs_stack import EcsCluster, EcsTaskDefinition
+from cdk_classes.lambda_stack import LambdaEcsTrigger
 
 class CdkInfraStack(Stack):
 
