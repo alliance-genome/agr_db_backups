@@ -1,5 +1,5 @@
-#CDK infra files
-cdk_infra/*
+#AWS infra files
+aws_infra/*
 #Github actions files
 .github/*
 
