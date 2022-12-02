@@ -1,42 +1,74 @@
 [
 	{
-		"action": "backup",
-		"target_env": "dev",
-		"identifier": "chipmunk"
+		"name": "chipmunk-dev-nightly-backup",
+		"schedule": "cron(0 21 * * ? *)",
+		"payload": {
+			"action": "backup",
+			"target_env": "dev",
+			"identifier": "chipmunk"
+		}
 	},
 	{
-		"action": "backup",
-		"target_env": "production",
-		"identifier": "chipmunk"
+		"name": "chipmunk-prod-nightly-backup",
+		"schedule": "cron(0 21 * * ? *)",
+		"payload": {
+				"action": "backup",
+				"target_env": "production",
+				"identifier": "chipmunk"
+		}
 	},
 	{
-		"action": "backup",
-		"identifier": "curation",
-		"target_env": "alpha"
+		"name": "curation-alpha-nightly-backup",
+		"schedule": "cron(0 21 * * ? *)",
+		"payload": {
+			"action": "backup",
+			"identifier": "curation",
+			"target_env": "alpha"
+		}
 	},
 	{
-		"action": "backup",
-		"identifier": "curation",
-		"target_env": "beta"
+		"name": "curation-beta-nightly-backup",
+		"schedule": "cron(0 21 * * ? *)",
+		"payload": {
+			"action": "backup",
+			"identifier": "curation",
+			"target_env": "beta"
+		}
 	},
 	{
-		"action": "backup",
-		"identifier": "curation",
-		"target_env": "production"
+		"name": "curation-prod-nightly-backup",
+		"schedule": "cron(0 21 * * ? *)",
+		"payload": {
+			"action": "backup",
+			"identifier": "curation",
+			"target_env": "production"
+		}
 	},
 	{
-		"action": "backup",
-		"target_env": "mati",
-		"identifier": "alpha"
+		"name": "mati-alpha-nightly-backup",
+		"schedule": "cron(0 21 * * ? *)",
+		"payload": {
+			"action": "backup",
+			"target_env": "mati",
+			"identifier": "alpha"
+		}
 	},
 	{
-		"action": "backup",
-		"target_env": "mati",
-		"identifier": "beta"
+		"name": "mati-beta-nightly-backup",
+		"schedule": "cron(0 21 * * ? *)",
+		"payload": {
+			"action": "backup",
+			"target_env": "mati",
+			"identifier": "beta"
+		}
 	},
 	{
-		"action": "backup",
-		"target_env": "mati",
-		"identifier": "production"
+		"name": "mati-prod-nightly-backup",
+		"schedule": "cron(0 21 * * ? *)",
+		"payload": {
+			"action": "backup",
+			"target_env": "mati",
+			"identifier": "production"
+		}
 	}
 ]
