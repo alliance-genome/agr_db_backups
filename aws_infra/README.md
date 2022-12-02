@@ -3,8 +3,8 @@
 
 This is the AWS infrastructure component of the agr-db-backups application.
 This includes all AWS resources and infrastructure required to make the main
-application callable and executable in AWS, and is defined and deployed using AWS CDK
-and written as Python code in this subdirectory.
+application callable and executable in AWS, and is defined and deployed using
+AWS CDK and written as Python code in this subdirectory.
 
 AWS CDK is an open-source framework that enables writing
 the entire cloud application as code, including all event sources and other AWS resources
@@ -15,20 +15,34 @@ For instructions on how to install the AWS CDK CLI,
 see the [AWS docs](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_install).
 
 
-This project is set up as a Python project, using a virtualenv
-stored in the `.venv` directory in this directory.
+As this project is set up as a Python project, it is advised to use [virtualenv](https://docs.python.org/3/library/venv.html)
+to allow isolated dependency installation. Furthermore, it is advised to store
+the virtual env in a `.venv` subdirectory in this directory.
+As this path was added to the .gitignore file, it will automatically be excluded
+from any git operations.
 
-To activate the virtualenv:
+To create a new virtual environment (for first first time use of this directory):
+```bash
+$ python3 -m venv .venv
+```
+
+Then for every subsequent use of this directory (for coding, deployment, ...)
+
+First activate the virtualenv:
 ```bash
 $ source .venv/bin/activate
 ```
 
-Once the virtualenv is activated, you can install the required dependencies through:
+Once the virtualenv is activated, install the required dependencies:
 ```bash
 $ pip install -r requirements.txt
 ```
 
 After that, you can execute all required CDK commands as described in below chapters.
+Once done working with the code in this directory, deactivate the virtualenv:
+```bash
+$ deactivate
+```
 
 ## Important files
 Two standard CDK configuration files can be found at the root level of this directory:
