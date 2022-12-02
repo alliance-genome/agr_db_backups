@@ -1,6 +1,16 @@
 [
 	{
 		"action": "backup",
+		"target_env": "dev",
+		"identifier": "chipmunk"
+	},
+	{
+		"action": "backup",
+		"target_env": "production",
+		"identifier": "chipmunk"
+	},
+	{
+		"action": "backup",
 		"identifier": "curation",
 		"target_env": "alpha"
 	},
@@ -13,5 +23,20 @@
 		"action": "backup",
 		"identifier": "curation",
 		"target_env": "production"
+	},
+	{
+		"action": "backup",
+		"target_env": "mati",
+		"identifier": "alpha"
+	},
+	{
+		"action": "backup",
+		"target_env": "mati",
+		"identifier": "beta"
+	},
+	{
+		"action": "backup",
+		"target_env": "mati",
+		"identifier": "production"
 	}
 ]
