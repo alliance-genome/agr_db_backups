@@ -38,7 +38,7 @@ class LambdaEcsTrigger:
 
 		# Create lambda function
 		aws_lambda_fn = aws_lambda.Function(scope, "agrDbBackupsLambdaTrigger",
-			function_name='agr_db_backups_ecs',
+			function_name='agr_db_backups',
 			description='Lambda function to trigger a backup or restore of a postgres databases to or from S3, through ECS',
 			runtime=aws_lambda.Runtime.PYTHON_3_7,
 			handler="ecs_trigger.lambda_handler",
