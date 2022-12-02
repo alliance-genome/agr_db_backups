@@ -14,27 +14,60 @@ jobs:
       - name: Print github.event
         run: |
           echo '${{ toJSON(github.event) }}'
-  build-sam:
+  build-and-push-docker-image:
     if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
     runs-on: ubuntu-20.04
     steps:
     - name: Check out repository code
       uses: actions/checkout@v3
-    - name: Setup python
-      uses: actions/setup-python@v3
-    - name: Setup AWS SAM
-      uses: aws-actions/setup-sam@v2
+      with:
+        fetch-depth: 0
     # This step will configure environment variables to be used by all steps
     # involving AWS interaction further down (in this job)
     - name: AWS credentials configuration
-      uses: aws-actions/configure-aws-credentials@v1
+      uses: aws-actions/configure-aws-credentials@v1-node16
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
-    - name: Build serverless application using SAM
-      run: sam build --use-container
-    - name: Deploy to AWS using SAM
+    - name: Amazon ECR login
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+    - name: Build, tag, and push image to Amazon ECR
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: agr_db_backups_ecs
+        IMAGE_TAG: latest
       run: |
-        sam deploy --resolve-s3 --resolve-image-repos --capabilities CAPABILITY_IAM \
-           --no-confirm-changeset --no-fail-on-empty-changeset
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+  cdk-deploy:
+    if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
+    needs: [build-and-push-docker-image]
+    runs-on: ubuntu-20.04
+    defaults:
+      run:
+        working-directory: ./aws_infra
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v3
+    - name: Setup node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: "16"
+    - name: Install CDK
+      run: npm install -g aws-cdk
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.7"
+    - name: Install CDK stack dependencies
+      run: pip install -r requirements.txt
+    - name: AWS credentials configuration
+      uses: aws-actions/configure-aws-credentials@v1-node16
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    - name: cdk deploy
+      run: cdk deploy --require-approval never

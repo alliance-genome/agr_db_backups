@@ -1,10 +1,13 @@
-FROM public.ecr.aws/lambda/python:3.8
+FROM public.ecr.aws/amazonlinux/amazonlinux:2
+
+# Install python
+RUN yum install -y python3 python3-pip
 
 # Copy function code
-COPY app/ ${LAMBDA_TASK_ROOT}/
+COPY app/ /app/
 
 # Install function's python library dependencies
-WORKDIR ${LAMBDA_TASK_ROOT}
+WORKDIR /app/
 RUN  pip3 install -r requirements.txt
 
 # Install function's external binary dependencies
@@ -14,4 +17,5 @@ RUN yum update -y \
 
 RUN rm -rf /var/cache/apk/*
 
-CMD [ "app.lambda_handler" ]
+ENTRYPOINT [ "python3", "app.py" ]
+CMD [ "--help" ]
