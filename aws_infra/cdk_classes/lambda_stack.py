@@ -23,14 +23,6 @@ class LambdaEcsTrigger:
 			]
 		)
 
-		# Create nightly backup event rule (scheduled backup trigger)
-		nightly_backups_event_rule = aws_events.Rule(scope, "nightly-backup-schedule",
-			rule_name='NightlyBackupSchedule',
-			description='Run nightly at 9 PM UTC',
-			enabled=True,
-			schedule=aws_events.Schedule.cron(minute='0', hour='21', day='*', month='*', year='*')
-		)
-
 		# Copy helper file into lambda bundle
 		dirname = os.path.dirname(os.path.realpath(__file__))
 		shutil.copyfile(os.path.join(dirname, '..','..','app','interfaces','helper.py'),
@@ -56,10 +48,19 @@ class LambdaEcsTrigger:
 		os.remove(os.path.join(dirname, '..', 'lambda_bundle', 'helper.py'))
 
 		# Add targets to nightly backup event rule for every DB requiring nightly backup
-		nightly_backup_targets = json.load(open(os.path.join(dirname, '..', 'resources', 'backup_list.json'), 'r'))
+		backup_list = json.load(open(os.path.join(dirname, '..', 'resources', 'backup_list.json'), 'r'))
 
-		for event_obj in nightly_backup_targets:
-			nightly_backups_event_rule.add_target(aws_events_targets.LambdaFunction(
+		for backup_target in backup_list:
+			# Create nightly backup event rule (scheduled backup trigger)
+			# for each target, as each event only support max 5 targets
+			rule_name = "agrdb-"+backup_target['name']
+			backup_event_rule = aws_events.Rule(scope, rule_name,
+				rule_name=rule_name,
+				enabled=True,
+				schedule=aws_events.Schedule.expression(backup_target['schedule'])
+			)
+
+			backup_event_rule.add_target(aws_events_targets.LambdaFunction(
 				handler=aws_lambda_fn,
-				event=aws_events.RuleTargetInput.from_object(event_obj)
+				event=aws_events.RuleTargetInput.from_object(backup_target['payload'])
 			))
