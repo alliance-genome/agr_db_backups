@@ -4,17 +4,17 @@
 		"schedule": "cron(0 21 * * ? *)",
 		"payload": {
 			"action": "backup",
-			"target_env": "dev",
-			"identifier": "chipmunk"
+			"identifier": "chipmunk",
+			"target_env": "dev"
 		}
 	},
 	{
 		"name": "chipmunk-prod-nightly-backup",
 		"schedule": "cron(0 21 * * ? *)",
 		"payload": {
-				"action": "backup",
-				"target_env": "production",
-				"identifier": "chipmunk"
+			"action": "backup",
+			"identifier": "chipmunk",
+			"target_env": "production"
 		}
 	},
 	{
@@ -49,8 +49,8 @@
 		"schedule": "cron(0 21 * * ? *)",
 		"payload": {
 			"action": "backup",
-			"target_env": "mati",
-			"identifier": "alpha"
+			"identifier": "mati",
+			"target_env": "alpha"
 		}
 	},
 	{
@@ -58,8 +58,8 @@
 		"schedule": "cron(0 21 * * ? *)",
 		"payload": {
 			"action": "backup",
-			"target_env": "mati",
-			"identifier": "beta"
+			"identifier": "mati",
+			"target_env": "beta"
 		}
 	},
 	{
@@ -67,8 +67,8 @@
 		"schedule": "cron(0 21 * * ? *)",
 		"payload": {
 			"action": "backup",
-			"target_env": "mati",
-			"identifier": "production"
+			"identifier": "mati",
+			"target_env": "production"
 		}
 	}
 ]
