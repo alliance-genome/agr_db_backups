@@ -223,7 +223,7 @@ def restore_s3_to_postgres(db_args):
 	process_dbcreate = subprocess.Popen(createdb_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
 
 	stderr_str = ""
-	for line in iter(process_dbdrop.stderr.readline, b''):
+	for line in iter(process_dbcreate.stderr.readline, b''):
 		decoded_str = line.decode().strip()
 		stderr_str += decoded_str+"\n"
 		logging.info(decoded_str)
@@ -236,11 +236,11 @@ def restore_s3_to_postgres(db_args):
 		return {'err_msg': error_message}
 
 	logging.info("Restoring dump {dumpfile} to DB {DB} at host {HOST}...".format(
-		dumpfile=tmp_local_filepath,DB=db_args['db_name'], HOST=db_args['db_host']))
+		dumpfile=tmp_local_filepath, DB=db_args['db_name'], HOST=db_args['db_host']))
 	process_dbrestore = subprocess.Popen(restore_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
 
 	stderr_str = ""
-	for line in iter(process_dbdrop.stderr.readline, b''):
+	for line in iter(process_dbrestore.stderr.readline, b''):
 		decoded_str = line.decode().strip()
 		stderr_str += decoded_str+"\n"
 		logging.info(decoded_str)
