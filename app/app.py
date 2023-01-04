@@ -192,6 +192,8 @@ def restore_s3_to_postgres(db_args):
 	s3.download_file(db_args['s3_bucket'], latest_backup_s3_filepath, tmp_local_filepath)
 
 	# -h {DB_HOST} -U {DB_USER}
+	dropconn_cmd = 'psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = \'{DB_NAME}\' and pid <> pg_backend_pid()"'.format(DB_NAME=db_args['db_name'])
+	refuseconn_cmd = 'psql -c "update pg_database set datallowconn = false where datname = \'{DB_NAME}\'"'.format(DB_NAME=db_args['db_name'])
 	dropdb_cmd  = 'dropdb {DB_NAME}'.format(DB_NAME=db_args['db_name'])
 	createdb_cmd  = 'createdb {DB_NAME}'.format(DB_NAME=db_args['db_name'])
 	restore_cmd = 'pg_restore -Fc -v -j 8 -d {DB_NAME} {FILENAME}'.format(
@@ -202,6 +204,40 @@ def restore_s3_to_postgres(db_args):
 	pg_env["PGUSER"] = db_args['db_user']
 	pg_env["PGHOST"] = db_args['db_host']
 	pg_env["PGPASSWORD"] = db_args['db_password']
+
+	# Update pg_database to refuse all new connections to DB
+	logging.info("Refusing all new connections to DB {DB} at host {HOST}...".format(DB=db_args['db_name'], HOST=db_args['db_host']))
+	process_refuseconn = subprocess.Popen(refuseconn_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
+
+	stderr_str = ""
+	for line in iter(process_refuseconn.stderr.readline, b''):
+		decoded_str = line.decode().strip()
+		stderr_str += decoded_str+"\n"
+		logging.info(decoded_str)
+
+	exitcode_refuseconn = process_refuseconn.wait()
+	if exitcode_refuseconn != 0:
+		error_message = "refuseconn execution failed (exitcode {}).\n".format(exitcode_refuseconn)\
+		                +stderr_str
+
+		return {'err_msg': error_message}
+
+	# Drop all connections to DB
+	logging.info("Dropping all existing connections to DB {DB} at host {HOST}...".format(DB=db_args['db_name'], HOST=db_args['db_host']))
+	process_dropconn = subprocess.Popen(dropconn_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
+
+	stderr_str = ""
+	for line in iter(process_dropconn.stderr.readline, b''):
+		decoded_str = line.decode().strip()
+		stderr_str += decoded_str+"\n"
+		logging.info(decoded_str)
+
+	exitcode_dropconn = process_dropconn.wait()
+	if exitcode_dropconn != 0:
+		error_message = "dropconn execution failed (exitcode {}).\n".format(exitcode_dropconn)\
+		                +stderr_str
+
+		return {'err_msg': error_message}
 
 	logging.info("Dropping DB {DB} at host {HOST}...".format(DB=db_args['db_name'], HOST=db_args['db_host']))
 	process_dbdrop = subprocess.Popen(dropdb_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
