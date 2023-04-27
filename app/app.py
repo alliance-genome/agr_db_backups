@@ -78,18 +78,28 @@ def get_args_dict(options, arg_set):
 	if 'src_env' in options and options['src_env'] != None:
 		return_args['src_env'] = options['src_env']
 
-	# Prevent data roll-up from environments with lower data integrity
-	# to environments with higher data integrity
-	if return_args['action'] == 'restore' and env_rank(return_args['src_env']) > env_rank(return_args['target_env']):
-		error_message = "Action 'restore' is not allowed to target env {target} from source env {source}."\
-		                .format(target=return_args['target_env'],source=return_args['src_env'])
+	if 'restore_timestamp' in options and options['restore_timestamp'] != None and return_args['action'] != 'restore':
+		error_message = "Input argument restore_timestamp only relevant for restore action."
 		return {'err_msg': error_message}
 
-	# Prevent accidental production environment restore
-	if return_args['action'] == 'restore' and return_args['target_env'] == 'production':
-		if 'prod_restore' not in options or options['prod_restore'] != 'true':
-			error_message = "Action 'restore' to target env production requested, but prod_restore is not defined as 'true'."
+	if return_args['action'] == 'restore':
+		# Prevent data roll-up from environments with lower data integrity
+		# to environments with higher data integrity
+		if env_rank(return_args['src_env']) > env_rank(return_args['target_env']):
+			error_message = "Action 'restore' is not allowed to target env {target} from source env {source}."\
+							.format(target=return_args['target_env'],source=return_args['src_env'])
 			return {'err_msg': error_message}
+
+		# Prevent accidental production environment restore
+		if return_args['target_env'] == 'production':
+			if 'prod_restore' not in options or options['prod_restore'] != 'true':
+				error_message = "Action 'restore' to target env production requested, but prod_restore is not defined as 'true'."
+				return {'err_msg': error_message}
+
+		if 'restore_timestamp' in options and options['restore_timestamp'] != None:
+			return_args['restore_timestamp'] = options['restore_timestamp']
+		else:
+			return_args['restore_timestamp'] = ''
 
 	if 'region' in options and options['region'] != None:
 		return_args['region'] = options['region']
@@ -180,10 +190,17 @@ def restore_s3_to_postgres(db_args):
 	"""
 
 	# now_datetime_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-	filename_prefix = '{identifier}/{env}/'.format(identifier=db_args['identifier'], env=db_args['src_env'])
-	# s3_target = 's3://{s3_bucket}/{filename}'.format(s3_bucket=db_args['s3_bucket'], filename=filename_prefix)
+	filename_prefix = '{identifier}/{env}/{timestamp}'.format(identifier=db_args['identifier'],
+	                                                          env=db_args['src_env'],
+	                                                          timestamp=db_args['restore_timestamp'])
 
 	latest_backup_s3_filepath = get_latest_s3_backup(db_args['s3_bucket'], filename_prefix)
+
+	if latest_backup_s3_filepath == None:
+		error_message = "Failed to find backup (filename_prefix {}).\n".format(filename_prefix)
+
+		return {'err_msg': error_message}
+
 	tmp_local_filepath = '/tmp/'+latest_backup_s3_filepath.replace('/','-')
 
 	logging.info('Retrieving latest backup: '+latest_backup_s3_filepath)
@@ -309,7 +326,11 @@ def get_latest_s3_backup(bucket_name, prefix):
 			if latest_all is None or latest_page['LastModified'] > latest_all['LastModified']:
 				latest_all = latest_page
 
-	return latest_all['Key']
+	if latest_all == None:
+		logging.error('No backups found in bucket {bucket} with prefix {prefix}...'.format(bucket=bucket_name, prefix=prefix))
+		return None
+	else:
+		return latest_all['Key']
 
 def env_rank(env_name):
 	'''
