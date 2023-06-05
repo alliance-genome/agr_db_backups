@@ -134,7 +134,7 @@ def get_args_dict(options, arg_set):
 				return_args[arg_key] = param['Parameter']['Value']
 			except ssm_client.exceptions.ParameterNotFound as err:
 				error_message = "parameter {param_name} not found in SSM for env {env} identifier {identifier}.".format(
-					env=return_args['env'], identifier=return_args['identifier'], param_name=param_name)
+					env=env, identifier=return_args['identifier'], param_name=param_name)
 				return {'err_msg': error_message}
 
 	return { 'db_args': return_args }
