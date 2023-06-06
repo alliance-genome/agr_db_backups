@@ -134,7 +134,7 @@ def get_args_dict(options, arg_set):
 				return_args[arg_key] = param['Parameter']['Value']
 			except ssm_client.exceptions.ParameterNotFound as err:
 				error_message = "parameter {param_name} not found in SSM for env {env} identifier {identifier}.".format(
-					env=return_args['env'], identifier=return_args['identifier'], param_name=param_name)
+					env=env, identifier=return_args['identifier'], param_name=param_name)
 				return {'err_msg': error_message}
 
 	return { 'db_args': return_args }
@@ -209,8 +209,12 @@ def restore_s3_to_postgres(db_args):
 	s3.download_file(db_args['s3_bucket'], latest_backup_s3_filepath, tmp_local_filepath)
 
 	# -h {DB_HOST} -U {DB_USER}
+	dropconn_cmd = 'psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = \'{DB_NAME}\' and pid <> pg_backend_pid()"'.format(DB_NAME=db_args['db_name'])
 	dropdb_cmd  = 'dropdb {DB_NAME}'.format(DB_NAME=db_args['db_name'])
 	createdb_cmd  = 'createdb {DB_NAME}'.format(DB_NAME=db_args['db_name'])
+	queryconnlimit_cmd = 'psql -t -A -c "SELECT datconnlimit FROM pg_database WHERE datname = \'{DB_NAME}\';"'.format(DB_NAME=db_args['db_name'])
+	setconnlimit_cmd = 'psql -c "ALTER DATABASE \"{DB_NAME}\" CONNECTION LIMIT {{connlimit}};"'.format(DB_NAME=db_args['db_name'])
+	refuseconn_cmd = setconnlimit_cmd.format(connlimit=0)
 	restore_cmd = 'pg_restore -Fc -v -j 8 -d {DB_NAME} {FILENAME}'.format(
 		DB_NAME=db_args['db_name'],
 		FILENAME=tmp_local_filepath)
@@ -219,6 +223,46 @@ def restore_s3_to_postgres(db_args):
 	pg_env["PGUSER"] = db_args['db_user']
 	pg_env["PGHOST"] = db_args['db_host']
 	pg_env["PGPASSWORD"] = db_args['db_password']
+
+	# Query and store current DB connection limit (for restore after DB restore completed)
+	logging.info("Retrieving connection limit for DB {DB} at host {HOST}...".format(DB=db_args['db_name'], HOST=db_args['db_host']))
+	process_queryconnlimit = subprocess.Popen(queryconnlimit_cmd, shell=True, stdout=subprocess.PIPE, env=pg_env)
+
+	connlimit = process_queryconnlimit.communicate()[0].decode().strip()
+
+	# Update pg_database to refuse all new (non-admin) connections to DB
+	logging.info("Refusing all new connections to DB...")
+	process_refuseconn = subprocess.Popen(refuseconn_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
+
+	stderr_str = ""
+	for line in iter(process_refuseconn.stderr.readline, b''):
+		decoded_str = line.decode().strip()
+		stderr_str += decoded_str+"\n"
+		logging.info(decoded_str)
+
+	exitcode_refuseconn = process_refuseconn.wait()
+	if exitcode_refuseconn != 0:
+		error_message = "Updating DB to refuse new connections failed (exitcode {}).\n".format(exitcode_refuseconn)\
+		                +stderr_str
+
+		return {'err_msg': error_message}
+
+	# Drop all connections to DB
+	logging.info("Dropping all existing connections to DB {DB} at host {HOST}...".format(DB=db_args['db_name'], HOST=db_args['db_host']))
+	process_dropconn = subprocess.Popen(dropconn_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
+
+	stderr_str = ""
+	for line in iter(process_dropconn.stderr.readline, b''):
+		decoded_str = line.decode().strip()
+		stderr_str += decoded_str+"\n"
+		logging.info(decoded_str)
+
+	exitcode_dropconn = process_dropconn.wait()
+	if exitcode_dropconn != 0:
+		error_message = "Dropping all existing connections to DB failed (exitcode {}).\n".format(exitcode_dropconn)\
+		                +stderr_str
+
+		return {'err_msg': error_message}
 
 	logging.info("Dropping DB {DB} at host {HOST}...".format(DB=db_args['db_name'], HOST=db_args['db_host']))
 	process_dbdrop = subprocess.Popen(dropdb_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
@@ -252,6 +296,41 @@ def restore_s3_to_postgres(db_args):
 
 		return {'err_msg': error_message}
 
+	# Refuse all new connections to (new) DB
+	logging.info("Refusing all new connections to DB {DB} at host {HOST}...".format(DB=db_args['db_name'], HOST=db_args['db_host']))
+	process_refuseconn = subprocess.Popen(refuseconn_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
+
+	stderr_str = ""
+	for line in iter(process_refuseconn.stderr.readline, b''):
+		decoded_str = line.decode().strip()
+		stderr_str += decoded_str+"\n"
+		logging.info(decoded_str)
+
+	exitcode_refuseconn = process_refuseconn.wait()
+	if exitcode_refuseconn != 0:
+		error_message = "Updating DB to refuse new connections failed (exitcode {}).\n".format(exitcode_refuseconn)\
+		                +stderr_str
+
+		return {'err_msg': error_message}
+
+	# Drop all connections to (new) DB
+	logging.info("Dropping all existing connections to DB {DB} at host {HOST}...".format(DB=db_args['db_name'], HOST=db_args['db_host']))
+	process_dropconn = subprocess.Popen(dropconn_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
+
+	stderr_str = ""
+	for line in iter(process_dropconn.stderr.readline, b''):
+		decoded_str = line.decode().strip()
+		stderr_str += decoded_str+"\n"
+		logging.info(decoded_str)
+
+	exitcode_dropconn = process_dropconn.wait()
+	if exitcode_dropconn != 0:
+		error_message = "Dropping all existing connections to DB failed (exitcode {}).\n".format(exitcode_dropconn)\
+		                +stderr_str
+
+		return {'err_msg': error_message}
+
+	# Restore dump to (new) DB
 	logging.info("Restoring dump {dumpfile} to DB {DB} at host {HOST}...".format(
 		dumpfile=tmp_local_filepath, DB=db_args['db_name'], HOST=db_args['db_host']))
 	process_dbrestore = subprocess.Popen(restore_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
@@ -265,6 +344,24 @@ def restore_s3_to_postgres(db_args):
 	exitcode_dbrestore = process_dbrestore.wait()
 
 	logging.debug("Dump restore process exited.")
+
+	# Re-enable DB access (for non-admin users)
+	#  by restoring original connlimit
+	logging.info("Re-enabling new connections to DB to connlim {connlimit}...".format(connlimit=connlimit))
+	process_reenableconn = subprocess.Popen(setconnlimit_cmd.format(connlimit=connlimit), shell=True, stderr=subprocess.PIPE, env=pg_env)
+
+	stderr_str = ""
+	for line in iter(process_reenableconn.stderr.readline, b''):
+		decoded_str = line.decode().strip()
+		stderr_str += decoded_str+"\n"
+		logging.info(decoded_str)
+
+	exitcode_reenableconn = process_reenableconn.wait()
+	if exitcode_reenableconn != 0:
+		error_message = "Restoring original connection limit failed (exitcode {}).\n".format(exitcode_reenableconn)\
+		                +stderr_str
+
+		return {'err_msg': error_message}
 
 	# Currently every restore to a non-RDS location "fails" because
 	# the role "rdsadmin" does not exist on local postgres installations.
