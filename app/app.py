@@ -234,6 +234,7 @@ def restore_s3_to_postgres(db_args):
 	process_queryconnlimit = subprocess.Popen(queryconnlimit_cmd, shell=True, stdout=subprocess.PIPE, env=pg_env)
 
 	connlimit = process_queryconnlimit.communicate()[0].decode().strip()
+	logging.info("\tCurrent connection limit for DB: {connlimit}".format(connlimit=connlimit))
 
 	# Update pg_database to refuse all new (non-admin) connections to DB
 	logging.info("Refusing all new connections to DB...")
@@ -253,7 +254,7 @@ def restore_s3_to_postgres(db_args):
 		return {'err_msg': error_message}
 
 	# Drop all connections to DB
-	logging.info("Dropping all existing connections to DB {DB} at host {HOST}...".format(DB=db_args['db_name'], HOST=db_args['db_host']))
+	logging.info("Dropping all existing connections to DB...")
 	process_dropconn = subprocess.Popen(dropconn_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
 
 	stderr_str = ""
@@ -269,7 +270,7 @@ def restore_s3_to_postgres(db_args):
 
 		return {'err_msg': error_message}
 
-	logging.info("Dropping DB {DB} at host {HOST}...".format(DB=db_args['db_name'], HOST=db_args['db_host']))
+	logging.info("Dropping DB...")
 	process_dbdrop = subprocess.Popen(dropdb_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
 
 	stderr_str = ""
@@ -285,7 +286,7 @@ def restore_s3_to_postgres(db_args):
 
 		return {'err_msg': error_message}
 
-	logging.info("Recreating DB {DB} at host {HOST}...".format(DB=db_args['db_name'], HOST=db_args['db_host']))
+	logging.info("Recreating DB...")
 	process_dbcreate = subprocess.Popen(createdb_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
 
 	stderr_str = ""
@@ -302,7 +303,7 @@ def restore_s3_to_postgres(db_args):
 		return {'err_msg': error_message}
 
 	# Refuse all new connections to (new) DB
-	logging.info("Refusing all new connections to DB {DB} at host {HOST}...".format(DB=db_args['db_name'], HOST=db_args['db_host']))
+	logging.info("Refusing all new connections to DB...")
 	process_refuseconn = subprocess.Popen(refuseconn_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
 
 	stderr_str = ""
@@ -319,7 +320,7 @@ def restore_s3_to_postgres(db_args):
 		return {'err_msg': error_message}
 
 	# Drop all connections to (new) DB
-	logging.info("Dropping all existing connections to DB {DB} at host {HOST}...".format(DB=db_args['db_name'], HOST=db_args['db_host']))
+	logging.info("Dropping all existing connections to DB...")
 	process_dropconn = subprocess.Popen(dropconn_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
 
 	stderr_str = ""
@@ -336,8 +337,8 @@ def restore_s3_to_postgres(db_args):
 		return {'err_msg': error_message}
 
 	# Restore dump to (new) DB
-	logging.info("Restoring dump {dumpfile} to DB {DB} at host {HOST}...".format(
-		dumpfile=tmp_local_filepath, DB=db_args['db_name'], HOST=db_args['db_host']))
+	logging.info("Restoring dump {dumpfile} to DB {DB}...".format(
+		dumpfile=tmp_local_filepath, DB=db_args['db_name']))
 	process_dbrestore = subprocess.Popen(restore_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
 
 	stderr_str = ""
@@ -352,7 +353,7 @@ def restore_s3_to_postgres(db_args):
 
 	# Re-enable DB access (for non-admin users)
 	#  by restoring original connlimit
-	logging.info("Re-enabling new connections to DB to connlim {connlimit}...".format(connlimit=connlimit))
+	logging.info("Re-enabling new connections to DB (restoring connlim {connlimit})...".format(connlimit=connlimit))
 	process_reenableconn = subprocess.Popen(setconnlimit_cmd.format(connlimit=connlimit), shell=True, stderr=subprocess.PIPE, env=pg_env)
 
 	stderr_str = ""
