@@ -162,7 +162,7 @@ you can execute the application container locally to restore to (or backup from)
 For more information on the docker arguments used, see the [developing](#developing) section. 
 ```bash
 #To restore the latest available curation alpha dump to your local postgres DB:
-> docker run --rm -it --net container:postgres -v ~/.aws:/root/.aws -e AWS_PROFILE 100225593120.dkr.ecr.us-east-1.amazonaws.com/agr_db_backups_ecs:latest --action restore --identifier curation --src_env alpha --target_env mluypaert-dev --db_name curation --db_user $PGUSER --db_password $PGPASSWORD --db_host postgres
+> docker run --rm -it --net container:postgres -v ~/.aws:/root/.aws -e AWS_PROFILE 100225593120.dkr.ecr.us-east-1.amazonaws.com/agr_db_backups_ecs:latest --action restore --identifier curation --src_env alpha --target_env mluypaert-dev --db_name curation --db_user $PGUSER --db_password $PGPASSWORD --db_host postgres --ignore_ownership true
 #To backup your local postgres DB (note: this will upload dumpfile of your local DB to S3):
 > docker run --rm -it --net container:postgres -v ~/.aws:/root/.aws -e AWS_PROFILE 100225593120.dkr.ecr.us-east-1.amazonaws.com/agr_db_backups_ecs:latest --action backup --identifier curation --target_env mluypaert-dev --db_name curation --db_user $PGUSER --db_password $PGPASSWORD --db_host postgres --s3_bucket agr-db-backups
 ```
