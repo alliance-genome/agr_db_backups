@@ -101,6 +101,9 @@ def get_args_dict(options, arg_set):
 		else:
 			return_args['restore_timestamp'] = ''
 
+		if 'ignore_ownership' in options and options['ignore_ownership'] == 'true':
+			return_args['ignore_ownership'] = True
+
 	if 'region' in options and options['region'] != None:
 		return_args['region'] = options['region']
 
@@ -215,9 +218,11 @@ def restore_s3_to_postgres(db_args):
 	queryconnlimit_cmd = 'psql -t -A -c "SELECT datconnlimit FROM pg_database WHERE datname = \'{DB_NAME}\';"'.format(DB_NAME=db_args['db_name'])
 	setconnlimit_cmd = 'psql -c "ALTER DATABASE \"{DB_NAME}\" CONNECTION LIMIT {{connlimit}};"'.format(DB_NAME=db_args['db_name'])
 	refuseconn_cmd = setconnlimit_cmd.format(connlimit=0)
-	restore_cmd = 'pg_restore -Fc -v -j 8 -d {DB_NAME} {FILENAME}'.format(
-		DB_NAME=db_args['db_name'],
-		FILENAME=tmp_local_filepath)
+	restore_cmd = 'pg_restore -Fc -v -j 8'
+	if 'ignore_ownership' in db_args:
+		restore_cmd += ' -O'
+	restore_cmd += ' -d {DB_NAME}'.format(DB_NAME=db_args['db_name'])
+	restore_cmd += ' {FILENAME}'.format(FILENAME=tmp_local_filepath)
 
 	pg_env = os.environ.copy()
 	pg_env["PGUSER"] = db_args['db_user']
