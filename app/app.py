@@ -187,12 +187,20 @@ def backup_postgres_to_s3(db_args):
 
 def restore_s3_to_postgres(db_args):
 	"""
-	This function will drop the specified target_env db,
-	recreate an empty one, and populate it with
-	the latest DB dump found from the src_env
+	This function will
+	1.  Refuse all new connections to target DB
+	2.  Terminate all open connections to target DB
+	3.  Put target DB in readonly mode
+	4.  Re-enable new connections to target DB
+	5.  Create a new, temporarily named, DB
+	6.  Populate the new DB with the appropriate
+	    DB dump file found from the src_env
+	7.  Refuse all new connections to target DB
+	8.  Terminate all open connections to target DB
+	9.  Drop the specified target_env db
+	10. Rename the temporarily named DB to the target_env DB name
 	"""
 
-	# now_datetime_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 	filename_prefix = '{identifier}/{env}/{timestamp}'.format(identifier=db_args['identifier'],
 	                                                          env=db_args['src_env'],
 	                                                          timestamp=db_args['restore_timestamp'])
@@ -206,6 +214,8 @@ def restore_s3_to_postgres(db_args):
 
 	tmp_local_filepath = '/tmp/'+latest_backup_s3_filepath.replace('/','-')
 
+	temp_DB_name = db_args['db_name']+datetime.now().strftime("%Y%m%d_%H%M%S")
+
 	logging.info('Retrieving latest backup: '+latest_backup_s3_filepath)
 
 	s3 = boto3.client('s3')
@@ -213,15 +223,17 @@ def restore_s3_to_postgres(db_args):
 
 	# -h {DB_HOST} -U {DB_USER}
 	dropconn_cmd = 'psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = \'{DB_NAME}\' and pid <> pg_backend_pid()"'.format(DB_NAME=db_args['db_name'])
+	readonlydb_cmd = 'psql -c "ALTER DATABASE {DB_NAME} SET default_transaction_read_only=on;"'.format(DB_NAME=db_args['db_name'])
 	dropdb_cmd  = 'dropdb {DB_NAME}'.format(DB_NAME=db_args['db_name'])
-	createdb_cmd  = 'createdb {DB_NAME}'.format(DB_NAME=db_args['db_name'])
+	createdb_cmd  = 'createdb {DB_NAME}'.format(DB_NAME=temp_DB_name)
+	renamedb_cmd  = 'psql -c "ALTER DATABASE {TEMP_DB_NAME} RENAME TO {DB_NAME};"'.format(TEMP_DB_NAME=temp_DB_name,DB_NAME=db_args['db_name'])
 	queryconnlimit_cmd = 'psql -t -A -c "SELECT datconnlimit FROM pg_database WHERE datname = \'{DB_NAME}\';"'.format(DB_NAME=db_args['db_name'])
 	setconnlimit_cmd = 'psql -c "ALTER DATABASE \"{DB_NAME}\" CONNECTION LIMIT {{connlimit}};"'.format(DB_NAME=db_args['db_name'])
 	refuseconn_cmd = setconnlimit_cmd.format(connlimit=0)
 	restore_cmd = 'pg_restore -Fc -v -j 8'
 	if 'ignore_ownership' in db_args:
 		restore_cmd += ' -O'
-	restore_cmd += ' -d {DB_NAME}'.format(DB_NAME=db_args['db_name'])
+	restore_cmd += ' -d {DB_NAME}'.format(DB_NAME=temp_DB_name)
 	restore_cmd += ' {FILENAME}'.format(FILENAME=tmp_local_filepath)
 
 	pg_env = os.environ.copy()
@@ -236,7 +248,7 @@ def restore_s3_to_postgres(db_args):
 	connlimit = process_queryconnlimit.communicate()[0].decode().strip()
 	logging.info("\tCurrent connection limit for DB: {connlimit}".format(connlimit=connlimit))
 
-	# Update pg_database to refuse all new (non-admin) connections to DB
+	# 1.  Refuse all new connections to target DB
 	logging.info("Refusing all new connections to DB...")
 	process_refuseconn = subprocess.Popen(refuseconn_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
 
@@ -253,7 +265,7 @@ def restore_s3_to_postgres(db_args):
 
 		return {'err_msg': error_message}
 
-	# Drop all connections to DB
+	# 2.  Terminate all open connections to target DB
 	logging.info("Dropping all existing connections to DB...")
 	process_dropconn = subprocess.Popen(dropconn_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
 
@@ -270,23 +282,42 @@ def restore_s3_to_postgres(db_args):
 
 		return {'err_msg': error_message}
 
-	logging.info("Dropping DB...")
-	process_dbdrop = subprocess.Popen(dropdb_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
+	# 3.  Put target DB in readonly mode
+	logging.info("Update DB to become read-only...")
+	process_readonlydb = subprocess.Popen(readonlydb_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
 
 	stderr_str = ""
-	for line in iter(process_dbdrop.stderr.readline, b''):
+	for line in iter(process_readonlydb.stderr.readline, b''):
 		decoded_str = line.decode().strip()
 		stderr_str += decoded_str+"\n"
 		logging.info(decoded_str)
 
-	exitcode_dbdrop = process_dbdrop.wait()
-	if exitcode_dbdrop != 0:
-		error_message = "dropdb execution failed (exitcode {}).\n".format(exitcode_dbdrop)\
+	exitcode_readonlydb = process_readonlydb.wait()
+	if exitcode_readonlydb != 0:
+		error_message = "Updating DB to be read-only failed (exitcode {}).\n".format(exitcode_readonlydb)\
 		                +stderr_str
 
 		return {'err_msg': error_message}
 
-	logging.info("Recreating DB...")
+	# 4.  Re-enable new connections to target DB
+	logging.info("Allowing new (read-only) connections to DB...")
+	process_allowconn = subprocess.Popen(setconnlimit_cmd.format(connlimit=connlimit), shell=True, stderr=subprocess.PIPE, env=pg_env)
+
+	stderr_str = ""
+	for line in iter(process_allowconn.stderr.readline, b''):
+		decoded_str = line.decode().strip()
+		stderr_str += decoded_str+"\n"
+		logging.info(decoded_str)
+
+	exitcode_allowconn = process_allowconn.wait()
+	if exitcode_allowconn != 0:
+		error_message = "Re-enabling DB connections (read-only) failed (exitcode {}).\n".format(exitcode_allowconn)\
+		                +stderr_str
+
+		return {'err_msg': error_message}
+
+	# 5.  Create a new, temporarily named, DB
+	logging.info("Creating new (temp) DB {}...".format(temp_DB_name))
 	process_dbcreate = subprocess.Popen(createdb_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
 
 	stderr_str = ""
@@ -302,7 +333,23 @@ def restore_s3_to_postgres(db_args):
 
 		return {'err_msg': error_message}
 
-	# Refuse all new connections to (new) DB
+	# 6.  Populate the new DB with the appropriate
+	#     DB dump file found from the src_env
+	logging.info("Restoring dump {dumpfile} to DB {DB}...".format(
+		dumpfile=tmp_local_filepath, DB=temp_DB_name))
+	process_dbrestore = subprocess.Popen(restore_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
+
+	stderr_str = ""
+	for line in iter(process_dbrestore.stderr.readline, b''):
+		decoded_str = line.decode().strip()
+		stderr_str += decoded_str+"\n"
+		logging.info(decoded_str)
+
+	exitcode_dbrestore = process_dbrestore.wait()
+
+	logging.debug("Dump restore process exited.")
+
+	# 7.  Refuse all new connections to target DB
 	logging.info("Refusing all new connections to DB...")
 	process_refuseconn = subprocess.Popen(refuseconn_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
 
@@ -319,7 +366,7 @@ def restore_s3_to_postgres(db_args):
 
 		return {'err_msg': error_message}
 
-	# Drop all connections to (new) DB
+	# 8.  Terminate all open connections to target DB
 	logging.info("Dropping all existing connections to DB...")
 	process_dropconn = subprocess.Popen(dropconn_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
 
@@ -336,35 +383,36 @@ def restore_s3_to_postgres(db_args):
 
 		return {'err_msg': error_message}
 
-	# Restore dump to (new) DB
-	logging.info("Restoring dump {dumpfile} to DB {DB}...".format(
-		dumpfile=tmp_local_filepath, DB=db_args['db_name']))
-	process_dbrestore = subprocess.Popen(restore_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
+	# 9.  Drop the specified target_env db
+	logging.info("Dropping original DB...")
+	process_dbdrop = subprocess.Popen(dropdb_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
 
 	stderr_str = ""
-	for line in iter(process_dbrestore.stderr.readline, b''):
+	for line in iter(process_dbdrop.stderr.readline, b''):
 		decoded_str = line.decode().strip()
 		stderr_str += decoded_str+"\n"
 		logging.info(decoded_str)
 
-	exitcode_dbrestore = process_dbrestore.wait()
+	exitcode_dbdrop = process_dbdrop.wait()
+	if exitcode_dbdrop != 0:
+		error_message = "dropdb execution failed (exitcode {}).\n".format(exitcode_dbdrop)\
+		                +stderr_str
 
-	logging.debug("Dump restore process exited.")
+		return {'err_msg': error_message}
 
-	# Re-enable DB access (for non-admin users)
-	#  by restoring original connlimit
-	logging.info("Re-enabling new connections to DB (restoring connlim {connlimit})...".format(connlimit=connlimit))
-	process_reenableconn = subprocess.Popen(setconnlimit_cmd.format(connlimit=connlimit), shell=True, stderr=subprocess.PIPE, env=pg_env)
+	# 10. Rename the temporarily named DB to the target_env DB name
+	logging.info("Renaming temp DB...")
+	process_dbrename = subprocess.Popen(renamedb_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
 
 	stderr_str = ""
-	for line in iter(process_reenableconn.stderr.readline, b''):
+	for line in iter(process_dbrename.stderr.readline, b''):
 		decoded_str = line.decode().strip()
 		stderr_str += decoded_str+"\n"
 		logging.info(decoded_str)
 
-	exitcode_reenableconn = process_reenableconn.wait()
-	if exitcode_reenableconn != 0:
-		error_message = "Restoring original connection limit failed (exitcode {}).\n".format(exitcode_reenableconn)\
+	exitcode_dbrename = process_dbrename.wait()
+	if exitcode_dbrename != 0:
+		error_message = "Rename-DB query execution failed (exitcode {}).\n".format(exitcode_dbrename)\
 		                +stderr_str
 
 		return {'err_msg': error_message}
