@@ -9,9 +9,10 @@ APP_OPTIONS = {
 	"db_user":           "DB username for target DB. Defaults to AWS SSM parameter store value.",
 	"help":              "Print this help text (provide any value).",
 	"identifier":        "Application identifier to backup/restore for (for example 'curation').",
-	"ignore_ownership":  "Flag to restore database as the restoring (postgres) user rather than maintaining"+
-	                     " ownerships as defined in the backup file. Define as 'true' in order to ignore ownership."+
-	                     " Only recommended for restores to developer's systems.",
+	"ignore_privileges": "Flag to skip restoring ownership and privileges on the restored database."+
+	                     " When define as 'true', all restored objects will be owned by the restoring"+
+	                     " (postgres) user rather than maintaining ownerships and privileges as defined in the backup file."+
+	                     " Only recommended for restores to developer's systems or other applications.",
 	"loglevel":          "Set logging level. Must be one of DEBUG, INFO, WARNING, ERROR or CRITICAL.",
 	"prod_restore":      "Extra flag to prevent accidental restores to 'production' environments."+
 	                     " Define this argument as 'true' to confirm intend to do a production environment restore.",
