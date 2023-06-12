@@ -101,8 +101,8 @@ def get_args_dict(options, arg_set):
 		else:
 			return_args['restore_timestamp'] = ''
 
-		if 'ignore_ownership' in options and options['ignore_ownership'] == 'true':
-			return_args['ignore_ownership'] = True
+		if 'ignore_privileges' in options and options['ignore_privileges'] == 'true':
+			return_args['ignore_privileges'] = True
 
 	if 'region' in options and options['region'] != None:
 		return_args['region'] = options['region']
@@ -231,8 +231,8 @@ def restore_s3_to_postgres(db_args):
 	setconnlimit_cmd = 'psql -c "ALTER DATABASE \"{DB_NAME}\" CONNECTION LIMIT {{connlimit}};"'.format(DB_NAME=db_args['db_name'])
 	refuseconn_cmd = setconnlimit_cmd.format(connlimit=0)
 	restore_cmd = 'pg_restore -Fc -v -j 8'
-	if 'ignore_ownership' in db_args:
-		restore_cmd += ' -O'
+	if 'ignore_privileges' in db_args:
+		restore_cmd += ' -O -x'
 	restore_cmd += ' -d {DB_NAME}'.format(DB_NAME=temp_DB_name)
 	restore_cmd += ' {FILENAME}'.format(FILENAME=tmp_local_filepath)
 
