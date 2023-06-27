@@ -223,7 +223,7 @@ def restore_s3_to_postgres(db_args):
 
 	# -h {DB_HOST} -U {DB_USER}
 	dropconn_cmd = 'psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = \'{DB_NAME}\' and pid <> pg_backend_pid()"'.format(DB_NAME=db_args['db_name'])
-	readonlydb_cmd = 'psql -c "ALTER DATABASE {DB_NAME} SET default_transaction_read_only=on;"'.format(DB_NAME=db_args['db_name'])
+	readonlydb_cmd = 'psql -c \'ALTER DATABASE "{DB_NAME}" SET default_transaction_read_only=on;\''.format(DB_NAME=db_args['db_name'])
 	dropdb_cmd  = 'dropdb {DB_NAME}'.format(DB_NAME=db_args['db_name'])
 	createdb_cmd  = 'createdb {DB_NAME}'.format(DB_NAME=temp_DB_name)
 	renamedb_cmd  = 'psql -c \'ALTER DATABASE "{TEMP_DB_NAME}" RENAME TO "{DB_NAME}";\''.format(TEMP_DB_NAME=temp_DB_name,DB_NAME=db_args['db_name'])
