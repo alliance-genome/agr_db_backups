@@ -226,9 +226,9 @@ def restore_s3_to_postgres(db_args):
 	readonlydb_cmd = 'psql -c "ALTER DATABASE {DB_NAME} SET default_transaction_read_only=on;"'.format(DB_NAME=db_args['db_name'])
 	dropdb_cmd  = 'dropdb {DB_NAME}'.format(DB_NAME=db_args['db_name'])
 	createdb_cmd  = 'createdb {DB_NAME}'.format(DB_NAME=temp_DB_name)
-	renamedb_cmd  = 'psql -c "ALTER DATABASE {TEMP_DB_NAME} RENAME TO {DB_NAME};"'.format(TEMP_DB_NAME=temp_DB_name,DB_NAME=db_args['db_name'])
+	renamedb_cmd  = 'psql -c \'ALTER DATABASE "{TEMP_DB_NAME}" RENAME TO "{DB_NAME}";\''.format(TEMP_DB_NAME=temp_DB_name,DB_NAME=db_args['db_name'])
 	queryconnlimit_cmd = 'psql -t -A -c "SELECT datconnlimit FROM pg_database WHERE datname = \'{DB_NAME}\';"'.format(DB_NAME=db_args['db_name'])
-	setconnlimit_cmd = 'psql -c "ALTER DATABASE \"{DB_NAME}\" CONNECTION LIMIT {{connlimit}};"'.format(DB_NAME=db_args['db_name'])
+	setconnlimit_cmd = 'psql -c \'ALTER DATABASE "{DB_NAME}" CONNECTION LIMIT {{connlimit}};\''.format(DB_NAME=db_args['db_name'])
 	refuseconn_cmd = setconnlimit_cmd.format(connlimit=0)
 	restore_cmd = 'pg_restore -Fc -v -j 8'
 	if 'ignore_privileges' in db_args:
