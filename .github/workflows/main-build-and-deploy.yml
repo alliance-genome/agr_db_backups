@@ -6,7 +6,7 @@ on:
       - main
 jobs:
   print-github-action-contexts:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Print github
         run: |
@@ -16,7 +16,7 @@ jobs:
           echo '${{ toJSON(github.event) }}'
   build-and-push-docker-image:
     if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
     - name: Check out repository code
       uses: actions/checkout@v3
@@ -44,7 +44,7 @@ jobs:
   cdk-deploy:
     if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
     needs: [build-and-push-docker-image]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: ./aws_infra
