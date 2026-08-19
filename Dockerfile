@@ -1,7 +1,7 @@
 FROM public.ecr.aws/amazonlinux/amazonlinux:2023
 
 # Install pip and PostgreSql client libraries
-RUN dnf install -y  python3-pip postgresql15
+RUN dnf install -y  python3-pip postgresql18
 
 # Copy function code
 COPY app/ /app/
