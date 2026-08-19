@@ -6,6 +6,7 @@ from constructs import Construct
 
 from cdk_classes.ecs_stack import EcsCluster, EcsTaskDefinition
 from cdk_classes.lambda_stack import LambdaEcsTrigger
+from cdk_classes.reporter_stack import LambdaBackupReporter
 
 class CdkInfraStack(Stack):
 
@@ -17,3 +18,4 @@ class CdkInfraStack(Stack):
 		LambdaEcsTrigger(self, ecs_cluster.get_cluster_arn(), ecs_task_def.get_task_def_arn(),
 			ecs_task_def.get_container_name(), ecs_task_def.get_aws_log_url_template(),
 			ecs_task_def.get_ecs_task_detail_url_template(ecs_cluster.get_cluster_name()))
+		LambdaBackupReporter(self)
