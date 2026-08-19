@@ -54,13 +54,13 @@ jobs:
     - name: Setup node.js
       uses: actions/setup-node@v3
       with:
-        node-version: "16"
+        node-version: "22"
     - name: Install CDK
-      run: npm install -g aws-cdk
+      run: npm install -g aws-cdk@2.1138.0
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
-        python-version: "3.9"
+        python-version: "3.12"
     - name: Install CDK stack dependencies
       run: pip install -r requirements.txt
     - name: AWS credentials configuration
