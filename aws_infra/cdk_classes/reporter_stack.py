@@ -1,7 +1,7 @@
 import os
 import shutil
 
-from aws_cdk import Duration, Stack
+from aws_cdk import Duration, Stack, Tags
 from aws_cdk import aws_iam as iam
 from aws_cdk import aws_lambda
 from aws_cdk import aws_events
@@ -65,6 +65,8 @@ class LambdaBackupReporter:
 			},
 			role=execution_role,
 			timeout=Duration.seconds(120))
+		Tags.of(aws_lambda_fn).add("Team", "devops")
+		Tags.of(aws_lambda_fn).add("Project", "db-backups")
 
 		os.remove(os.path.join(dirname, '..', 'reporter_bundle', 'backup_list.json'))
 
