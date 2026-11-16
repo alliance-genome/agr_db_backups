@@ -80,6 +80,10 @@ class EcsTaskDefinition:
 			memory_limit_mib = 2048,
 			cpu = 1024, # 1 vCPU
 			ephemeral_storage_gib = 21,
+			runtime_platform=ecs.RuntimePlatform(
+				cpu_architecture=ecs.CpuArchitecture.ARM64,
+				operating_system_family=ecs.OperatingSystemFamily.LINUX
+			),
 			execution_role=execution_role,
 			task_role=task_role
 		)
