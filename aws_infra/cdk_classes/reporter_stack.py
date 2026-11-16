@@ -57,6 +57,7 @@ class LambdaBackupReporter:
 			function_name='agr_db_backups_reporter',
 			description='Lambda function to report the status of the nightly AGR database backups to Slack',
 			runtime=aws_lambda.Runtime.PYTHON_3_13,
+			architecture=aws_lambda.Architecture.ARM_64,
 			handler="backup_reporter.lambda_handler",
 			code=aws_lambda.Code.from_asset(os.path.join(dirname, '..', 'reporter_bundle')),
 			environment={

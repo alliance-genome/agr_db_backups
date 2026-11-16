@@ -16,7 +16,7 @@ jobs:
           echo '${{ toJSON(github.event) }}'
   build-and-push-docker-image:
     if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'no-deploy')
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04-arm
     steps:
     - name: Check out repository code
       uses: actions/checkout@v3

@@ -33,6 +33,7 @@ class LambdaEcsTrigger:
 			function_name='agr_db_backups',
 			description='Lambda function to trigger a backup or restore of a postgres databases to or from S3, through ECS',
 			runtime=aws_lambda.Runtime.PYTHON_3_13,
+			architecture=aws_lambda.Architecture.ARM_64,
 			handler="ecs_trigger.lambda_handler",
 			code=aws_lambda.Code.from_asset(os.path.join(dirname, '..', 'lambda_bundle')),
 			environment={
