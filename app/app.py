@@ -235,6 +235,9 @@ def restore_s3_to_postgres(db_args):
 		restore_cmd += ' -O -x'
 	restore_cmd += ' -d {DB_NAME}'.format(DB_NAME=temp_DB_name)
 	restore_cmd += ' {FILENAME}'.format(FILENAME=tmp_local_filepath)
+	# pg_dump/pg_restore do not carry planner statistics, and autovacuum gets
+	# cancelled by pg_restore's locks, so analyze explicitly before going live.
+	analyze_cmd = 'vacuumdb --analyze-only -j 8 -d {DB_NAME}'.format(DB_NAME=temp_DB_name)
 
 	pg_env = os.environ.copy()
 	pg_env["PGUSER"] = db_args['db_user']
@@ -348,6 +351,26 @@ def restore_s3_to_postgres(db_args):
 	exitcode_dbrestore = process_dbrestore.wait()
 
 	logging.debug("Dump restore process exited.")
+
+	# 6b. Generate planner statistics on the restored DB.
+	#     Without them the first queries can get catastrophic plans
+	#     (e.g. hours instead of seconds) until autovacuum catches up.
+	#     A failure here is logged but does not abort the restore.
+	logging.info("Analyzing restored DB {DB}...".format(DB=temp_DB_name))
+	process_analyze = subprocess.Popen(analyze_cmd, shell=True, stderr=subprocess.PIPE, env=pg_env)
+
+	analyze_stderr_str = ""
+	for line in iter(process_analyze.stderr.readline, b''):
+		decoded_str = line.decode().strip()
+		analyze_stderr_str += decoded_str+"\n"
+		logging.info(decoded_str)
+
+	exitcode_analyze = process_analyze.wait()
+	if exitcode_analyze != 0:
+		logging.error("Analyzing restored DB failed (exitcode {}).\n".format(exitcode_analyze)
+		              +analyze_stderr_str)
+	else:
+		logging.info("Analyze of restored DB complete.")
 
 	# 7.  Refuse all new connections to target DB
 	logging.info("Refusing all new connections to DB...")
